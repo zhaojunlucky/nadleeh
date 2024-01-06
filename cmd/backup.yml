@@ -1,0 +1,28 @@
+name: "backup"
+env:
+  BACK_BASE_DIR: ~/backup/
+
+jobs:
+  backup-nginx:
+    steps:
+      - name: get date
+        id: date
+        script: |
+          const curDate = new Date()
+          const dateStr = curDate.toString()
+          env.BACK_DIR = `${env.BACK_BASE_DIR}/${dateStr}`
+      - run: |
+          NG=$BACK_DIR/nginx
+          mkdir -p $NG
+          cp /etc/nginx/nginx.conf $NG
+          cp -r /etc/nginx/site-availables $NG
+          tar -cvf $BACK_DIR.tar $BACK_DIR
+      - name: upload google drive
+        uses: google-drive
+        with:
+          name: $BACK_DIR.tar
+          path: $BACK_DIR.tar
+          remote-path: backups
+
+          
+  

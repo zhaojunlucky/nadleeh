@@ -9,6 +9,13 @@ import (
 	"os"
 )
 
+func ParamTest(str *string) {
+	if str == nil {
+		fmt.Println("nil str")
+	} else {
+		fmt.Println(*str)
+	}
+}
 func main() {
 	vm := goja.New()
 	new(require.Registry).Enable(vm)
@@ -22,14 +29,12 @@ func main() {
 		text := string(bytes)
 		return &text, nil
 	})
+
+	vm.GlobalObject().Set("paramTest", ParamTest)
 	_, err := vm.RunString(`
-try{
-	console.log(readFile('/Users/jun/Downloads/ads.txt'))
-console.log("normal")
-} catch(e) {
-console.log("catch")
-	console.log(e)
-}
+paramTest(null)
+paramTest("hello world")
+
 	`)
 	if err != nil {
 		fmt.Println(err)
