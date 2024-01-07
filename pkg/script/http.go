@@ -7,13 +7,17 @@ import (
 	"strings"
 )
 
+type NJSHttp struct {
+}
+
 type HttpResponse struct {
-	StatusCode    int
-	Status        string
-	Headers       map[string][]string
-	Body          string
-	ContentLength int64
-	ContentType   string
+	StatusCode      int
+	Status          string
+	Headers         map[string][]string
+	Body            string
+	ContentLength   int64
+	ContentType     string
+	ContentEncoding string
 }
 
 type HttpRequest struct {
@@ -23,7 +27,7 @@ type HttpRequest struct {
 	Body    string
 }
 
-func Request(method string, url string, headers *map[string]string, body *string) (*HttpResponse, error) {
+func (js *NJSHttp) Request(method string, url string, headers *map[string]string, body *string) (*HttpResponse, error) {
 	var bodyReader io.Reader = nil
 	if body != nil {
 		bodyReader = bytes.NewBufferString(*body)
@@ -55,25 +59,51 @@ func Request(method string, url string, headers *map[string]string, body *string
 		Status:        resp.Status,
 		Headers:       resp.Header,
 		ContentLength: resp.ContentLength,
-		ContentType:   decodeContentType(resp.Header),
 		Body:          string(bodyBytes),
 	}
+	httpResp.ContentType, httpResp.ContentEncoding = js.decodeContentType(resp.Header)
 	return httpResp, nil
 }
 
-func Get(url string, headers *map[string]string, params *map[string]string) (*HttpResponse, error) {
-
+func (js *NJSHttp) Get(url string, headers *map[string]string) (*HttpResponse, error) {
+	return js.Request("GET", url, headers, nil)
 }
 
-func decodeContentType(header http.Header) string {
+func (js *NJSHttp) Delete(url string, headers *map[string]string, body *string) (*HttpResponse, error) {
+	return js.Request("DELETE", url, headers, body)
+}
+
+func (js *NJSHttp) Post(url string, headers *map[string]string, body *string) (*HttpResponse, error) {
+	return js.Request("POST", url, headers, body)
+}
+
+func (js *NJSHttp) Put(url string, headers *map[string]string, body *string) (*HttpResponse, error) {
+	return js.Request("PUT", url, headers, body)
+}
+
+func (js *NJSHttp) Patch(url string, headers *map[string]string, body *string) (*HttpResponse, error) {
+	return js.Request("Patch", url, headers, body)
+}
+
+func (js *NJSHttp) decodeContentType(header http.Header) (string, string) {
 	for name, value := range header {
-		if strings.ToUpper(name) == "content-type" {
+		if strings.ToLower(name) == "content-type" {
 			if len(value) > 0 {
-				return value[0]
+				ct := value[0]
+				if strings.ContainsRune(ct, ';') {
+					ctEnc := strings.Split(ct, ";")
+					if strings.ContainsRune(ctEnc[1], '=') {
+						return ctEnc[0], strings.Split(ctEnc[1], "=")[1]
+					}
+					return ctEnc[0], ctEnc[1]
+				} else {
+					return ct, ""
+				}
+
 			} else {
-				return ""
+				return "", ""
 			}
 		}
 	}
-	return ""
+	return "", ""
 }

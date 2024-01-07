@@ -7,7 +7,10 @@ import (
 	"os"
 )
 
-func ReadFileAsLines(filePath string) ([]string, error) {
+type NJSFile struct {
+}
+
+func (js *NJSFile) ReadFileAsLines(filePath string) ([]string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -26,7 +29,7 @@ func ReadFileAsLines(filePath string) ([]string, error) {
 	return lines, nil
 }
 
-func ReadFileAsString(filePath string) (*string, error) {
+func (js *NJSFile) ReadFileAsString(filePath string) (*string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -40,7 +43,7 @@ func ReadFileAsString(filePath string) (*string, error) {
 	return &text, nil
 }
 
-func IsFile(filePath string) (bool, error) {
+func (js *NJSFile) IsFile(filePath string) (bool, error) {
 	fi, err := os.Stat(filePath)
 	if err != nil {
 		return false, err
@@ -48,7 +51,7 @@ func IsFile(filePath string) (bool, error) {
 	return !fi.IsDir(), err
 }
 
-func IsDir(filePath string) (bool, error) {
+func (js *NJSFile) IsDir(filePath string) (bool, error) {
 	fi, err := os.Stat(filePath)
 	if err != nil {
 		return false, err
@@ -56,10 +59,10 @@ func IsDir(filePath string) (bool, error) {
 	return fi.IsDir(), err
 }
 
-func DeleteFile(filePath string) error {
+func (js *NJSFile) DeleteFile(filePath string) error {
 	return os.RemoveAll(filePath)
 }
 
-func WriteFile(filePath string, content string) error {
+func (js *NJSFile) WriteFile(filePath string, content string) error {
 	return os.WriteFile(filePath, []byte(content), fs.ModePerm)
 }
