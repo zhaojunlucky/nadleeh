@@ -35,3 +35,9 @@ func (action *StepAction) runWithJS(ctx *WorkflowRunContext, parent env.Env) *Ac
 	ret, output, err := ctx.JSCtx.Run(parent, action.step.Script)
 	return NewActionResult(err, ret, output)
 }
+
+func NewStepAction(step workflow.Step) *StepAction {
+	return &StepAction{
+		step: step,
+	}
+}

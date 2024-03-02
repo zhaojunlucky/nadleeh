@@ -35,3 +35,7 @@ func NewJSVm() *goja.Runtime {
 
 	return vm
 }
+
+func NewJSContext() JSContext {
+	return JSContext{}
+}

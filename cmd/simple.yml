@@ -1,0 +1,17 @@
+name: "test"
+env:
+  BACK_BASE_DIR: ~/backup/
+
+jobs:
+  os-info:
+    steps:
+      - name: get date
+        id: date
+        script: |
+          const curDate = new Date()
+          const dateStr = curDate.toString()
+          console.log(env.GetAll())
+          env.Set('BACK_DIR', `${env.Get('BACK_BASE_DIR')}/${dateStr}`)
+      - run: |
+          printenv
+          echo "=====end======="

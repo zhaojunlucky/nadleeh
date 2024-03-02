@@ -27,9 +27,19 @@ func (sh *ShellContext) Run(env env.Env, shell string) (int, string, error) {
 	for key, value := range env.GetAll() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
-	output, err := cmd.CombinedOutput()
+	aow := NewStdOutputWriter()
+	cmd.Stdout = *aow
+	cmd.Stderr = *aow
+	err = cmd.Run()
+
 	if err != nil {
-		return 1, string(output), err
+		return 1, aow.String(), err
 	}
-	return 0, string(output), nil
+	return 0, aow.String(), nil
+}
+
+func NewShellContext() ShellContext {
+	return ShellContext{
+		TmpDir: os.TempDir(),
+	}
 }

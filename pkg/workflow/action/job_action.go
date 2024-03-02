@@ -5,7 +5,7 @@ import "nadleeh/pkg/workflow/model"
 
 type JobAction struct {
 	job               workflow.Job
-	stepActions       []StepAction
+	stepActions       []*StepAction
 	stepActionResults []*ActionResult
 }
 
@@ -15,4 +15,14 @@ func (action JobAction) Run(ctx *WorkflowRunContext, parent env.Env) *ActionResu
 		action.stepActionResults = append(action.stepActionResults, stepAction.Run(ctx, parent))
 	}
 	return NewActionResult(nil, 0, "")
+}
+
+func NewJobAction(job workflow.Job) *JobAction {
+	j := &JobAction{
+		job: job,
+	}
+	for _, step := range job.Steps {
+		j.stepActions = append(j.stepActions, NewStepAction(step))
+	}
+	return j
 }
