@@ -21,6 +21,7 @@ func main() {
 	vm := goja.New()
 	new(require.Registry).Enable(vm)
 	console.Enable(vm)
+
 	vm.GlobalObject().Set("file", &script.NJSFile{})
 	vm.GlobalObject().Set("http", &script.NJSHttp{})
 
@@ -35,11 +36,13 @@ func main() {
 	})
 
 	vm.GlobalObject().Set("paramTest", ParamTest)
-	_, err := vm.RunString(`
+	o, err := vm.RunString(`
 console.log(http.Get)
 const resp = http.Get("https://google.com")
 console.log(JSON.stringify(resp))
+return "hello"
 	`)
+	fmt.Println(o.String())
 	if err != nil {
 		fmt.Println(err)
 	}

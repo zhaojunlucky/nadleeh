@@ -23,6 +23,10 @@ jobs:
           name: $BACK_DIR.tar
           path: $BACK_DIR.tar
           remote-path: backups
+  set-aa:
+    steps:
+      - name: echo
+      - run: echo hello
 
           
   
