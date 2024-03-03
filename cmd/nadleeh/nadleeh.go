@@ -27,11 +27,14 @@ func main() {
 		panic(fmt.Sprintf("%s must be a file", wYml))
 	}
 
-	workflowDef, err := workflowDef.ParseWorkflow(wYml)
+	wfDef, err := workflowDef.ParseWorkflow(wYml)
 	if err != nil {
 		panic(err)
 	}
 
-	wfa := workflow.NewWorkflowRunAction(workflowDef)
-	wfa.Run(env.NewOSEnv())
+	wfa := workflow.NewWorkflowRunAction(wfDef)
+	result := wfa.Run(env.NewOSEnv())
+	if result.ReturnCode != 0 {
+		panic(result.Err)
+	}
 }

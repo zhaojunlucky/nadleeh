@@ -15,7 +15,8 @@ func (js *JSContext) Run(env env.Env, script string) (int, string, error) {
 	vm.Set("env", env)
 	val, err := vm.RunString(script)
 	output := ""
-	if val != goja.Undefined() && val != goja.Null() {
+
+	if val != nil && val != goja.Undefined() && val != goja.Null() {
 		output = val.String()
 	}
 	if err != nil {
@@ -26,7 +27,7 @@ func (js *JSContext) Run(env env.Env, script string) (int, string, error) {
 
 func NewJSVm() *goja.Runtime {
 	vm := goja.New()
-	//vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
+	vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
 	new(require.Registry).Enable(vm)
 	console.Enable(vm)
 

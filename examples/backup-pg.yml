@@ -1,0 +1,21 @@
+name: "backup postgres"
+env:
+  BACK_BASE_DIR: backup
+
+jobs:
+  backup-nginx:
+    steps:
+      - name: get date
+        id: date
+        script: |
+          const curDate = new Date()
+          const dateStr = curDate.toISOString().replaceAll(":", "_")
+          env.set('BACK_DIR', `${env.get('BACK_BASE_DIR')}/${dateStr}`)
+      - run: |
+          PG=$BACK_DIR/PG
+          echo "backup postgres to ${PG}"
+          mkdir -p $PG
+          docker exec -t postgres pg_dumpall -c -U sa | gzip > $PG/dump_`date +%Y-%m-%d"_"%H_%M_%S`.sql.gz
+          # cat your_dump.sql | docker exec -i your-db-container psql -U postgres
+          ls $PG | grep dump
+          echo "backup postgres complete"

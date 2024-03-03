@@ -6,4 +6,6 @@ type Env interface {
 	SetAll(envs map[string]string)
 
 	GetAll() map[string]string
+
+	Expand(s string) string
 }

@@ -5,6 +5,7 @@ import "errors"
 type Job struct {
 	Name  string
 	Steps []Step
+	Env   map[string]string
 }
 
 func (job *Job) Validate() error {

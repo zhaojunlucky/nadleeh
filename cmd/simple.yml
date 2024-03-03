@@ -9,9 +9,19 @@ jobs:
         id: date
         script: |
           const curDate = new Date()
-          const dateStr = curDate.toString()
-          console.log(env.GetAll())
-          env.Set('BACK_DIR', `${env.Get('BACK_BASE_DIR')}/${dateStr}`)
+          const dateStr = curDate.toISOString().replaceAll(":", "_")
+          console.log(JSON.stringify(env.getAll()))
+          env.set('BACK_DIR', `${env.get('BACK_BASE_DIR')}/${dateStr}`)
       - run: |
           printenv
+          ls ~
+          PG=$BACK_DIR/PG
+          echo "back dir is $PG"
           echo "=====end======="
+      - name: upload google drive
+        uses: google-drive
+        with:
+          name: site-21.tar.gz.zip
+          path: /Users/jun/Downloads/site-21.tar.gz.zip
+          cred: /Users/jun/Downloads/zhaojunlucky-2db52f66a725.json
+          remote-path: 1HH9HdCPiIhzCbdfYzB5UFmvLZ9xu0OVo

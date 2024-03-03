@@ -10,7 +10,7 @@ jobs:
         script: |
           const curDate = new Date()
           const dateStr = curDate.toString()
-          env.BACK_DIR = `${env.BACK_BASE_DIR}/${dateStr}`
+          env.set('BACK_DIR') = `${env.get('BACK_BASE_DIR')}/${dateStr}`
       - run: |
           NG=$BACK_DIR/nginx
           mkdir -p $NG
@@ -22,7 +22,8 @@ jobs:
         with:
           name: $BACK_DIR.tar
           path: $BACK_DIR.tar
-          remote-path: backups
+          cred: gdrive-cred.json
+          remote-path: 1HH9HdCPiIhzCbdfYzB5UFmvLZ9xu0OVo
   set-aa:
     steps:
       - name: echo

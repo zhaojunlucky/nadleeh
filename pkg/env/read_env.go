@@ -66,3 +66,9 @@ func (env *NadReadEnv) Set(key, value string) {
 func (env *NadReadEnv) SetAll(envs map[string]string) {
 
 }
+
+func (env *NadReadEnv) Expand(s string) string {
+	return os.Expand(s, func(s string) string {
+		return env.Get(s)
+	})
+}

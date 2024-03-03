@@ -62,3 +62,9 @@ func (env *NadEnv) GetAll() map[string]string {
 	return envs
 
 }
+
+func (env *NadEnv) Expand(s string) string {
+	return os.Expand(s, func(s string) string {
+		return env.Get(s)
+	})
+}

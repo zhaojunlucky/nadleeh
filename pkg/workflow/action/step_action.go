@@ -3,6 +3,7 @@ package workflow
 import (
 	"fmt"
 	"nadleeh/pkg/env"
+	"nadleeh/pkg/workflow/plugin"
 )
 import "nadleeh/pkg/workflow/model"
 
@@ -11,6 +12,7 @@ type StepAction struct {
 }
 
 func (action *StepAction) Run(ctx *WorkflowRunContext, parent env.Env) *ActionResult {
+	fmt.Printf("Run step %s\n", action.step.Name)
 	if action.step.RequirePlugin() {
 		return action.runWithPlugin(ctx, parent)
 	} else if action.step.HasRun() {
@@ -23,7 +25,19 @@ func (action *StepAction) Run(ctx *WorkflowRunContext, parent env.Env) *ActionRe
 }
 
 func (action *StepAction) runWithPlugin(ctx *WorkflowRunContext, parent env.Env) *ActionResult {
-	return nil
+	plug := plugin.NewPlugin(action.step.Uses)
+	if plug == nil {
+		return NewActionResult(fmt.Errorf("invalid plugin %s", action.step.Uses), 0, "")
+	}
+	err := plug.Init(action.step.With)
+	if err != nil {
+		return NewActionResult(err, 1, "")
+	}
+	err = plug.Run(parent)
+	if err != nil {
+		return NewActionResult(err, 1, "")
+	}
+	return NewActionResult(nil, 0, "")
 }
 
 func (action *StepAction) runWithShell(ctx *WorkflowRunContext, parent env.Env) *ActionResult {

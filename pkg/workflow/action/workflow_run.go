@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"fmt"
 	"nadleeh/pkg/env"
 	"nadleeh/pkg/script"
 	"nadleeh/pkg/shell"
@@ -26,8 +27,13 @@ type WorkflowRunAction struct {
 
 func (action WorkflowRunAction) Run(parent env.Env) *ActionResult {
 	workflowEnv := env.NewEnv(parent, &action.workflow.Env)
+	fmt.Printf("Run workflow: %s\n", action.workflow.Name)
 	for _, jobAction := range action.jobActions {
 		action.jobActionResults = append(action.jobActionResults, jobAction.Run(action.workflowRunCtx, workflowEnv))
+		if action.jobActionResults[len(action.jobActionResults)-1].ReturnCode != 0 {
+			action.workflowActionResult = action.jobActionResults[len(action.jobActionResults)-1]
+			return action.workflowActionResult
+		}
 	}
 	action.workflowActionResult = NewActionResult(nil, 0, "")
 	return action.workflowActionResult
