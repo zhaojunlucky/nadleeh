@@ -12,6 +12,8 @@ type StepAction struct {
 }
 
 func (action *StepAction) Run(ctx *WorkflowRunContext, parent env.Env) *ActionResult {
+	parent.SetAll(action.step.Env)
+
 	fmt.Printf("Run step %s\n", action.step.Name)
 	if action.step.RequirePlugin() {
 		return action.runWithPlugin(ctx, parent)
@@ -41,8 +43,12 @@ func (action *StepAction) runWithPlugin(ctx *WorkflowRunContext, parent env.Env)
 }
 
 func (action *StepAction) runWithShell(ctx *WorkflowRunContext, parent env.Env) *ActionResult {
-	ret, output, err := ctx.ShellCtx.Run(parent, action.step.Run)
+	ret, output, err := ctx.ShellCtx.Run(parent, action.step.Run, action.needOutput())
 	return NewActionResult(err, ret, output)
+}
+
+func (action *StepAction) needOutput() bool {
+	return false
 }
 
 func (action *StepAction) runWithJS(ctx *WorkflowRunContext, parent env.Env) *ActionResult {

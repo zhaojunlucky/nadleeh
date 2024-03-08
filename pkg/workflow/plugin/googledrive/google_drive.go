@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	drive "google.golang.org/api/drive/v3"
@@ -81,21 +80,19 @@ func ServiceAccount(credentialFile string) *http.Client {
 		},
 		TokenURL: google.JWTTokenURL,
 	}
-	client := config.Client(oauth2.NoContext)
+	client := config.Client(context.TODO())
 	return client
 }
 
 func (g *GoogleDrive) validate(parent env.Env) error {
-	g.name = g.config["name"]
-	if len(g.name) <= 0 {
-		return fmt.Errorf("invalid name")
-	}
 	g.name = parent.Expand(g.name)
-	g.path = g.config["path"]
 	if len(g.name) <= 0 {
 		return fmt.Errorf("invalid name")
 	}
-	g.path = parent.Expand(g.path)
+	g.path = parent.Expand(g.config["path"])
+	if len(g.path) <= 0 {
+		return fmt.Errorf("invalid path")
+	}
 	fi, err := os.Stat(g.path)
 	if err != nil {
 		return err
@@ -106,7 +103,7 @@ func (g *GoogleDrive) validate(parent env.Env) error {
 	}
 	g.remotePath = parent.Expand(g.config["remote-path"])
 
-	g.cred = g.config["cred"]
+	g.cred = parent.Expand(g.config["cred"])
 	if len(g.cred) <= 0 {
 		return fmt.Errorf("invalid cred")
 	}

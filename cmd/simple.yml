@@ -1,6 +1,8 @@
 name: "test"
+
+working-dir: /Users/jun/Downloads
 env:
-  BACK_BASE_DIR: ~/backup/
+  BACK_BASE_DIR: ~/backup
 
 jobs:
   os-info:
@@ -13,15 +15,16 @@ jobs:
           console.log(JSON.stringify(env.getAll()))
           env.set('BACK_DIR', `${env.get('BACK_BASE_DIR')}/${dateStr}`)
       - run: |
-          printenv
-          ls ~
+          #printenv
+          #ls ~
           PG=$BACK_DIR/PG
+          cat bbb.zz
           echo "back dir is $PG"
           echo "=====end======="
-      - name: upload google drive
-        uses: google-drive
-        with:
-          name: site-21.tar.gz.zip
-          path: /Users/jun/Downloads/site-21.tar.gz.zip
-          cred: /Users/jun/Downloads/zhaojunlucky-2db52f66a725.json
-          remote-path: 1HH9HdCPiIhzCbdfYzB5UFmvLZ9xu0OVo
+#      - name: upload google drive
+#        uses: google-drive
+#        with:
+#          name: site-21.tar.gz.zip
+#          path: /Users/jun/Downloads/site-21.tar.gz.zip
+#          cred: /Users/jun/Downloads/zhaojunlucky-2db52f66a725.json
+#          remote-path: 1HH9HdCPiIhzCbdfYzB5UFmvLZ9xu0OVo

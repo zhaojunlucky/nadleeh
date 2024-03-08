@@ -10,17 +10,16 @@ type NadEnv struct {
 	envs   map[string]string
 }
 
-func NewEnv(parent Env, envs *map[string]string) *NadEnv {
+func NewEnv(parent Env, envs map[string]string) *NadEnv {
 	if parent == nil {
 		parent = OSEnv
 	}
 	env := &NadEnv{
 		Parent: parent,
+		envs:   make(map[string]string, max(16, len(envs))),
 	}
-	if envs != nil {
-		env.envs = *envs
-	} else {
-		env.envs = make(map[string]string)
+	if len(envs) > 0 {
+		env.SetAll(envs)
 	}
 	return env
 }
@@ -33,12 +32,12 @@ func (env *NadEnv) Get(key string) string {
 }
 
 func (env *NadEnv) Set(key, value string) {
-	env.envs[key] = value
+	env.envs[key] = env.Expand(value)
 }
 
 func (env *NadEnv) SetAll(envs map[string]string) {
 	for key, value := range envs {
-		env.envs[key] = value
+		env.envs[key] = env.Expand(value)
 	}
 }
 

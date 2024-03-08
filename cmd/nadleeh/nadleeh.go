@@ -12,7 +12,7 @@ import (
 
 func main() {
 	if len(os.Args) <= 1 {
-		panic("usage: nadleeh worlflow.yml")
+		panic("usage: nadleeh workflow.yml")
 	}
 	wYml := os.Args[1]
 	ext := strings.ToLower(path.Ext(wYml))

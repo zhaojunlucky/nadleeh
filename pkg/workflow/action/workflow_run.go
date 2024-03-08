@@ -6,6 +6,7 @@ import (
 	"nadleeh/pkg/script"
 	"nadleeh/pkg/shell"
 	workflow "nadleeh/pkg/workflow/model"
+	"os"
 )
 
 type WorkflowRunContext struct {
@@ -26,7 +27,9 @@ type WorkflowRunAction struct {
 }
 
 func (action WorkflowRunAction) Run(parent env.Env) *ActionResult {
-	workflowEnv := env.NewEnv(parent, &action.workflow.Env)
+	workflowEnv := env.NewEnv(parent, action.workflow.Env)
+	action.changeWorkingDir(workflowEnv)
+
 	fmt.Printf("Run workflow: %s\n", action.workflow.Name)
 	for _, jobAction := range action.jobActions {
 		action.jobActionResults = append(action.jobActionResults, jobAction.Run(action.workflowRunCtx, workflowEnv))
@@ -37,6 +40,22 @@ func (action WorkflowRunAction) Run(parent env.Env) *ActionResult {
 	}
 	action.workflowActionResult = NewActionResult(nil, 0, "")
 	return action.workflowActionResult
+}
+
+func (action WorkflowRunAction) changeWorkingDir(workflowEnv *env.NadEnv) {
+	if len(action.workflow.WorkingDir) > 0 {
+		fmt.Printf("change working dir to: %s\n", action.workflow.WorkingDir)
+		workflowEnv.Set("PWD", action.workflow.WorkingDir)
+		workflowEnv.Set("HOME", action.workflow.WorkingDir)
+		fi, err := os.Stat(action.workflow.WorkingDir)
+		if err != nil {
+			panic(err)
+		}
+		if !fi.IsDir() {
+			panic(fmt.Errorf("working directory must be a directory: %s", action.workflow.WorkingDir))
+		}
+
+	}
 }
 
 func NewWorkflowRunAction(workflow *workflow.Workflow) *WorkflowRunAction {

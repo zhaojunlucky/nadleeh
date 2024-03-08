@@ -8,17 +8,19 @@ import (
 )
 
 type Workflow struct {
-	Name    string
-	Version string
-	Env     map[string]string
-	Jobs    []Job
+	Name       string
+	Version    string
+	Env        map[string]string
+	Jobs       []Job
+	WorkingDir string
 }
 
 type workflowDefinition struct {
-	Name    string
-	Version string
-	Env     map[string]string
-	Jobs    yaml.Node
+	Name       string
+	Version    string
+	Env        map[string]string
+	WorkingDir string `yaml:"working-dir"`
+	Jobs       yaml.Node
 }
 
 func ParseWorkflow(filePath string) (*Workflow, error) {
@@ -32,10 +34,11 @@ func ParseWorkflow(filePath string) (*Workflow, error) {
 		return nil, err
 	}
 	workflow := &Workflow{
-		Name:    rawWorkflow.Name,
-		Version: rawWorkflow.Version,
-		Env:     rawWorkflow.Env,
-		Jobs:    []Job{},
+		Name:       rawWorkflow.Name,
+		Version:    rawWorkflow.Version,
+		Env:        rawWorkflow.Env,
+		WorkingDir: rawWorkflow.WorkingDir,
+		Jobs:       []Job{},
 	}
 
 	for i, node := range rawWorkflow.Jobs.Content {

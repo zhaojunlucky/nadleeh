@@ -14,6 +14,7 @@ type JobAction struct {
 
 func (action JobAction) Run(ctx *WorkflowRunContext, parent env.Env) *ActionResult {
 	fmt.Printf("Run job: %s\n", action.job.Name)
+	parent.SetAll(action.job.Env)
 	for _, stepAction := range action.stepActions {
 		action.stepActionResults = append(action.stepActionResults, stepAction.Run(ctx, parent))
 		if action.stepActionResults[len(action.stepActionResults)-1].ReturnCode != 0 {
