@@ -6,6 +6,8 @@ require (
 	github.com/dop251/goja v0.0.0-20240220182346-e401ed450204
 	github.com/dop251/goja_nodejs v0.0.0-20240221231712-27eeffc9c235
 	github.com/google/uuid v1.6.0
+	github.com/sirupsen/logrus v1.9.3
+	golang.org/x/oauth2 v0.17.0
 	google.golang.org/api v0.167.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -31,7 +33,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.23.0 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/oauth2 v0.17.0 // indirect
 	golang.org/x/sys v0.17.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect

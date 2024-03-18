@@ -57,7 +57,7 @@ func (g *GoogleDrive) Run(parent env.Env) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s\n", res.Id)
+	fmt.Printf("https://drive.google.com/file/d/%s/view?usp=drive_link\n", res.Id)
 	return nil
 }
 
@@ -85,7 +85,7 @@ func ServiceAccount(credentialFile string) *http.Client {
 }
 
 func (g *GoogleDrive) validate(parent env.Env) error {
-	g.name = parent.Expand(g.name)
+	g.name = parent.Expand(g.config["name"])
 	if len(g.name) <= 0 {
 		return fmt.Errorf("invalid name")
 	}
