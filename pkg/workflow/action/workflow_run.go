@@ -1,7 +1,7 @@
 package workflow
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"nadleeh/pkg/env"
 	"nadleeh/pkg/script"
 	"nadleeh/pkg/shell"
@@ -30,7 +30,7 @@ func (action WorkflowRunAction) Run(parent env.Env) *ActionResult {
 	workflowEnv := env.NewEnv(parent, action.workflow.Env)
 	action.changeWorkingDir(workflowEnv)
 
-	fmt.Printf("Run workflow: %s\n", action.workflow.Name)
+	log.Infof("Run workflow: %s", action.workflow.Name)
 	for _, jobAction := range action.jobActions {
 		action.jobActionResults = append(action.jobActionResults, jobAction.Run(action.workflowRunCtx, workflowEnv))
 		if action.jobActionResults[len(action.jobActionResults)-1].ReturnCode != 0 {
@@ -44,15 +44,15 @@ func (action WorkflowRunAction) Run(parent env.Env) *ActionResult {
 
 func (action WorkflowRunAction) changeWorkingDir(workflowEnv *env.NadEnv) {
 	if len(action.workflow.WorkingDir) > 0 {
-		fmt.Printf("change working dir to: %s\n", action.workflow.WorkingDir)
+		log.Infof("change working dir to: %s", action.workflow.WorkingDir)
 		workflowEnv.Set("PWD", action.workflow.WorkingDir)
 		workflowEnv.Set("HOME", action.workflow.WorkingDir)
 		fi, err := os.Stat(action.workflow.WorkingDir)
 		if err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		if !fi.IsDir() {
-			panic(fmt.Errorf("working directory must be a directory: %s", action.workflow.WorkingDir))
+			log.Panicf("working directory must be a directory: %s", action.workflow.WorkingDir)
 		}
 
 	}

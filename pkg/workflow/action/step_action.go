@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"nadleeh/pkg/env"
 	"nadleeh/pkg/workflow/plugin"
 )
@@ -14,7 +15,7 @@ type StepAction struct {
 func (action *StepAction) Run(ctx *WorkflowRunContext, parent env.Env) *ActionResult {
 	parent.SetAll(action.step.Env)
 
-	fmt.Printf("Run step %s\n", action.step.Name)
+	log.Infof("Run step %s", action.step.Name)
 	if action.step.RequirePlugin() {
 		return action.runWithPlugin(ctx, parent)
 	} else if action.step.HasRun() {

@@ -1,10 +1,10 @@
 package workflow
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"nadleeh/pkg/env"
+	"nadleeh/pkg/workflow/model"
 )
-import "nadleeh/pkg/workflow/model"
 
 type JobAction struct {
 	job               workflow.Job
@@ -13,7 +13,7 @@ type JobAction struct {
 }
 
 func (action JobAction) Run(ctx *WorkflowRunContext, parent env.Env) *ActionResult {
-	fmt.Printf("Run job: %s\n", action.job.Name)
+	log.Infof("Run job: %s", action.job.Name)
 	parent.SetAll(action.job.Env)
 	for _, stepAction := range action.stepActions {
 		action.stepActionResults = append(action.stepActionResults, stepAction.Run(ctx, parent))
