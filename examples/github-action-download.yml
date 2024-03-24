@@ -1,0 +1,18 @@
+name: "test"
+
+working-dir: /Users/jun/Downloads
+env:
+  BACK_BASE_DIR: /Users/jun/Downloads
+jobs:
+  os-info:
+    steps:
+      - name: download artifact
+        uses: github-actions
+        with:
+          action: download-artifact
+          repository: zhaojunlucky/gundam
+          branch: main
+          path: ${BACK_BASE_DIR}/artifact
+          token: ENC(BAwCS2Q2ddz9q+yDmUusvQfV8aoSRpLmLhlDMWShKAUEkHhKuLiSKL3lrIL1Kd67F3mw3L7d1r9aFZcyjvwfmNyKS0LmcAL4EfHNan6dWDJAQJO4+LZuC0imxUitmN7OWlDDmSXKmFjN78tRm9/LwHiciTKfmrHmIjZ3O7oQXYoHOea3PCSmBlWxyeFak6YD4B0jVExhy56uQZ7gm0pmVaUVy6ztkuc5qoAMR6T9utEe8DIPS9OztHzOX7bdK0wLSg==)
+      - run: |
+          ls -al ${BACK_BASE_DIR}/artifact

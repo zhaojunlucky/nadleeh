@@ -71,25 +71,25 @@ func NewWorkflowRunAction(workflow *workflow.Workflow, pPriFile *string) *Workfl
 func RunWorkflow(cmd *argparse.Command, args map[string]argparse.Arg) {
 	yml, err := argument.GetStringFromArg(args["file"], true)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	wYml := *yml
 	log.Infof("run workflow file: %s", wYml)
 	ext := strings.ToLower(path.Ext(wYml))
 	if ext != ".yaml" && ext != ".yml" {
-		log.Fatalf("%s must be a yaml file", wYml)
+		log.Panicf("%s must be a yaml file", wYml)
 	}
 	fi, err := os.Stat(wYml)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	if fi.IsDir() {
-		log.Fatalf("%s must be a file", wYml)
+		log.Panicf("%s must be a file", wYml)
 	}
 
 	wfDef, err := workflow.ParseWorkflow(wYml)
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 	pPriFile, err := argument.GetStringFromArg(args["private"], false)
 
@@ -98,6 +98,6 @@ func RunWorkflow(cmd *argparse.Command, args map[string]argparse.Arg) {
 	log.Infof("run workflow end, status %d", result.ReturnCode)
 
 	if result.ReturnCode != 0 {
-		log.Fatal(result.Err)
+		log.Panic(result.Err)
 	}
 }

@@ -7,7 +7,7 @@ import (
 )
 import "nadleeh/pkg/workflow/plugin/googledrive"
 
-var SupportedPlugins = []string{"google-drive"}
+var SupportedPlugins = []string{"google-drive", "github-actions"}
 
 type Plugin interface {
 	Init(ctx *run_context.WorkflowRunContext, config map[string]string) error
@@ -17,7 +17,7 @@ type Plugin interface {
 func NewPlugin(name string) Plugin {
 	if name == "google-drive" {
 		return &googledrive.GoogleDrive{}
-	} else if name == "github-action" {
+	} else if name == "github-actions" {
 		return &githubaction.GitHubAction{}
 	}
 	return nil

@@ -62,7 +62,7 @@ type JSSecureContext struct {
 	secureCtx *encrypt.SecureContext
 }
 
-func (js *JSSecureContext) IsSecure(str string) bool {
+func (js *JSSecureContext) IsEncrypted(str string) bool {
 	return js.secureCtx.IsEncrypted(str)
 }
 

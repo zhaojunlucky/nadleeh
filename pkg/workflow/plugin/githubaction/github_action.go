@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const DOWNLOAD = "download_artifact"
+const DOWNLOAD = "download-artifact"
 
 type GitHubAction struct {
 	ctx          *run_context.WorkflowRunContext
@@ -39,11 +39,11 @@ func (g *GitHubAction) Run(parent env.Env) error {
 	client := github.NewClient(nil)
 	client = client.WithAuthToken(g.token)
 
-	opt := &github.ListOptions{
-		Page:    100,
-		PerPage: 1,
-	}
-	artifacts, _, err := client.Actions.ListArtifacts(context.Background(), g.organization, g.repository, opt)
+	//opt := &github.ListOptions{
+	//	Page:    100,
+	//	PerPage: 1,
+	//}
+	artifacts, _, err := client.Actions.ListArtifacts(context.Background(), g.organization, g.repository, nil)
 	if err != nil {
 		return err
 	}
@@ -61,20 +61,15 @@ func (g *GitHubAction) Run(parent env.Env) error {
 			if err != nil {
 				return err
 			}
-			//		cmd := `curl -L -o '%s'
-			//-H "Accept: application/vnd.github+json"
-			//-H "Authorization: Bearer %s" \
-			//-H "X-GitHub-Api-Version: 2022-11-28" \
-			//%s`
-			//		_, _, err = g.ctx.ShellCtx.Run(parent, fmt.Sprintf(cmd, path.Join(g.path, arti.GetName()),
-			//			g.token, arti.GetArchiveDownloadURL()), false)
-			//		if err != nil {
-			//			return err
-			//		}
+			artiIrl := arti.GetArchiveDownloadURL()
+			if len(artiIrl) <= 0 {
+				fmt.Printf("invalid download url for artifact %s\n", arti.GetName())
+				continue
+			}
 			jsHttp := script.NJSHttp{}
 			headers := map[string]string{"Accept": "application/vnd.github+json", "Authorization": fmt.Sprintf("Bearer %s", g.token), "X-GitHub-Api-Version": "2022-11-28"}
 
-			err = jsHttp.DownloadFile("GET", arti.GetArchiveDownloadURL(), path.Join(g.path, arti.GetName()), &headers, nil)
+			err = jsHttp.DownloadFile("GET", artiIrl, path.Join(g.path, arti.GetName()), &headers, nil)
 			if err != nil {
 				return err
 			}

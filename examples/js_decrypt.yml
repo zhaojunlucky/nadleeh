@@ -1,0 +1,17 @@
+name: "test"
+
+working-dir: /Users/jun/Downloads
+
+jobs:
+  os-info:
+    steps:
+      - name: decrypt
+        id: decrypt
+        script: |
+          const encrypted = "ENC(BKEO6XdV6QCEgKDKFln9N08LEe8P9AxE0gjacCmqQ67Sb38D9RNsh4xWZoWpP+ETbApV4pa1MLHQlzM61IAm+QIaG8SP/ei5SaKdBeZV5is/bS5km98BymuQRmUT/TEpw8X/WQag4DfZ7JBjjnR4TiU=)"
+          const str = secure.decrypt(encrypted)
+          console.log(str)
+          console.log(secure.isEncrypted(encrypted))
+          console.log(secure.isEncrypted("123"))
+          console.log(secure.isEncrypted("ENC(123)"))
+

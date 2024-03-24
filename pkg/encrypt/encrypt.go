@@ -1,6 +1,7 @@
 package encrypt
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
@@ -58,14 +59,14 @@ func Encrypt(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
 
 	pStr := argsMap["str"]
 	if pStr.GetParsed() {
-		str := pStr.GetResult().(string)
-		str = strings.TrimSpace(str)
+		pStr := pStr.GetResult().(*string)
+		str := strings.TrimSpace(*pStr)
 		log.Infof("encrypt string: %s", str)
 		encrypted, err := ecies.EncryptWithPublic(pubKey, []byte(str))
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("entryped string is: %s\n", string(encrypted))
+		fmt.Printf("entryped string is: %s\n", base64.StdEncoding.EncodeToString(encrypted))
 		return
 	}
 	log.Fatal("invalid argument for decrypt")
