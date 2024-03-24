@@ -2,8 +2,10 @@ package script
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -83,6 +85,46 @@ func (js *NJSHttp) Put(url string, headers *map[string]string, body *string) (*H
 
 func (js *NJSHttp) Patch(url string, headers *map[string]string, body *string) (*HttpResponse, error) {
 	return js.Request("Patch", url, headers, body)
+}
+
+func (js *NJSHttp) DownloadFile(method string, url string, downloadPath string, headers *map[string]string, body *string) error {
+	out, err := os.Create(downloadPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	var bodyReader io.Reader = nil
+	if body != nil {
+		bodyReader = bytes.NewBufferString(*body)
+	}
+	req, err := http.NewRequest(strings.ToUpper(method), url, bodyReader)
+	if err != nil {
+		return err
+	}
+	if headers != nil {
+		for name, value := range *headers {
+			req.Header.Add(name, value)
+		}
+	}
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("bad status: %s", resp.Status)
+	}
+	fmt.Printf("download file to %s\n", downloadPath)
+	// Writer the body to file
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (js *NJSHttp) decodeContentType(header http.Header) (string, string) {

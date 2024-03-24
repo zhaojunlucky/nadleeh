@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	drive "google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
-	"log"
 	"nadleeh/pkg/env"
+	"nadleeh/pkg/workflow/run_context"
 	"net/http"
 	"os"
 )
@@ -19,6 +20,7 @@ const (
 )
 
 type GoogleDrive struct {
+	ctx        *run_context.WorkflowRunContext
 	name       string
 	path       string
 	remotePath string
@@ -26,7 +28,8 @@ type GoogleDrive struct {
 	cred       string
 }
 
-func (g *GoogleDrive) Init(config map[string]string) error {
+func (g *GoogleDrive) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
+	g.ctx = ctx
 	g.config = config
 
 	return nil
@@ -38,7 +41,7 @@ func (g *GoogleDrive) Run(parent env.Env) error {
 	if err != nil {
 		return err
 	}
-	client := ServiceAccount(g.cred)
+	client := g.ServiceAccount(g.cred)
 	srv, err := drive.NewService(context.Background(), option.WithHTTPClient(client), option.WithScopes(SCOPE))
 	if err != nil {
 		return err
@@ -62,10 +65,17 @@ func (g *GoogleDrive) Run(parent env.Env) error {
 }
 
 // ServiceAccount : Use Service account
-func ServiceAccount(credentialFile string) *http.Client {
+func (g *GoogleDrive) ServiceAccount(credentialFile string) *http.Client {
 	b, err := os.ReadFile(credentialFile)
 	if err != nil {
 		log.Fatal(err)
+	}
+	s := string(b)
+	if g.ctx.SecureCtx.IsEncrypted(s) {
+		b, err = g.ctx.SecureCtx.Decrypt(s)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 	var c = struct {
 		Email      string `json:"client_email"`

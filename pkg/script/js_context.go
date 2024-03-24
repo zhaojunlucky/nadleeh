@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/dop251/goja_nodejs/console"
 	"github.com/dop251/goja_nodejs/require"
+	"nadleeh/pkg/encrypt"
 	"nadleeh/pkg/env"
 )
 import "github.com/dop251/goja"
@@ -16,11 +17,13 @@ var (
 )
 
 type JSContext struct {
+	JSSecCtx JSSecureContext
 }
 
 func (js *JSContext) Run(env env.Env, script string) (int, string, error) {
 	vm := NewJSVm()
 	vm.Set("env", env)
+	vm.Set("secure", &js.JSSecCtx)
 	val, err := vm.RunString(script)
 	output := ""
 
@@ -49,6 +52,25 @@ func NewJSVm() *goja.Runtime {
 	return vm
 }
 
-func NewJSContext() JSContext {
-	return JSContext{}
+func NewJSContext(secCtx *encrypt.SecureContext) JSContext {
+	return JSContext{
+		JSSecCtx: JSSecureContext{secureCtx: secCtx},
+	}
+}
+
+type JSSecureContext struct {
+	secureCtx *encrypt.SecureContext
+}
+
+func (js *JSSecureContext) IsSecure(str string) bool {
+	return js.secureCtx.IsEncrypted(str)
+}
+
+func (js *JSSecureContext) Decrypt(str string) (*string, error) {
+	val, err := js.secureCtx.DecryptStr(str)
+	if err != nil {
+		return nil, err
+	} else {
+		return &val, nil
+	}
 }

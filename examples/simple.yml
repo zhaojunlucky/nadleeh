@@ -29,3 +29,11 @@ jobs:
 #          path: /Users/jun/Downloads/site-21.tar.gz.zip
 #          cred: /Users/jun/Downloads/zhaojunlucky-2db52f66a725.json
 #          remote-path: 1HH9HdCPiIhzCbdfYzB5UFmvLZ9xu0OVo
+      - name: download artifact
+        uses: github-actions
+        with:
+          action: download-artifact
+          repository: zhaojunlucky/gundam
+          branch: main
+          path: ${BACK_DIR}/artifact
+          token: ENC(adcdc)

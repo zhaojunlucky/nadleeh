@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"nadleeh/pkg/env"
 	"nadleeh/pkg/workflow/model"
+	"nadleeh/pkg/workflow/run_context"
 )
 
 type JobAction struct {
@@ -12,7 +13,7 @@ type JobAction struct {
 	stepActionResults []*ActionResult
 }
 
-func (action JobAction) Run(ctx *WorkflowRunContext, parent env.Env) *ActionResult {
+func (action JobAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env) *ActionResult {
 	log.Infof("Run job: %s", action.job.Name)
 	parent.SetAll(action.job.Env)
 	for _, stepAction := range action.stepActions {

@@ -2,15 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
 	"io"
-	"nadleeh/pkg/env"
+	"nadleeh/internal/argument"
+	"nadleeh/pkg/encrypt"
 	workflow "nadleeh/pkg/workflow/action"
-	workflowDef "nadleeh/pkg/workflow/model"
 	"os"
 	"path"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -60,39 +60,49 @@ func setupLog() func() {
 	}
 }
 
+func createArgsMap(args []argparse.Arg) map[string]argparse.Arg {
+	argsMap := make(map[string]argparse.Arg, len(args))
+	for _, arg := range args {
+		argsMap[arg.GetLname()] = arg
+	}
+	return argsMap
+}
+
 func main() {
 	logFunc := setupLog()
 	if logFunc != nil {
 		defer logFunc()
 	}
-	if len(os.Args) <= 1 {
-		log.Panic("usage: nadleeh workflow.yml")
-	}
-	wYml := os.Args[1]
 
-	log.Infof("run workflow file: %s", wYml)
-	ext := strings.ToLower(path.Ext(wYml))
-	if ext != ".yaml" && ext != ".yml" {
-		log.Panicf("%s must be a yaml file", wYml)
-	}
-	fi, err := os.Stat(wYml)
+	parser := argument.NewNadleehCliParser()
+	err := parser.Parse(os.Args)
+
 	if err != nil {
-		log.Panic(err)
-	}
-	if fi.IsDir() {
-		log.Panicf("%s must be a file", wYml)
+		fmt.Println(parser.Usage(err))
+		return
 	}
 
-	wfDef, err := workflowDef.ParseWorkflow(wYml)
-	if err != nil {
-		log.Panic(err)
+	for _, arg := range parser.GetArgs() {
+		if arg.GetLname() == "help" && arg.GetParsed() {
+			fmt.Println(parser.Usage(nil))
+			return
+		}
 	}
 
-	wfa := workflow.NewWorkflowRunAction(wfDef)
-	result := wfa.Run(env.NewOSEnv())
-	log.Infof("run workflow end, status %d", result.ReturnCode)
-
-	if result.ReturnCode != 0 {
-		log.Panic(result.Err)
+	for _, cmd := range parser.GetCommands() {
+		if !cmd.Happened() {
+			log.Debugf("comand %s not specified", cmd.GetName())
+			continue
+		}
+		switch cmd.GetName() {
+		case "run":
+			workflow.RunWorkflow(cmd, createArgsMap(cmd.GetArgs()))
+		case "keypair":
+			encrypt.GenerateKeyPair(cmd, createArgsMap(cmd.GetArgs()))
+		case "encrypt":
+			encrypt.Encrypt(cmd, createArgsMap(cmd.GetArgs()))
+		default:
+			log.Fatalf("unknown command: %s", cmd.GetName())
+		}
 	}
 }

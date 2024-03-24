@@ -1,18 +1,16 @@
 package workflow
 
 import (
+	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
+	"nadleeh/internal/argument"
 	"nadleeh/pkg/env"
-	"nadleeh/pkg/script"
-	"nadleeh/pkg/shell"
 	workflow "nadleeh/pkg/workflow/model"
+	"nadleeh/pkg/workflow/run_context"
 	"os"
+	"path"
+	"strings"
 )
-
-type WorkflowRunContext struct {
-	JSCtx    script.JSContext
-	ShellCtx shell.ShellContext
-}
 
 type WorkflowRunAction struct {
 	workflow workflow.Workflow
@@ -23,7 +21,7 @@ type WorkflowRunAction struct {
 
 	workflowActionResult *ActionResult
 
-	workflowRunCtx *WorkflowRunContext
+	workflowRunCtx *run_context.WorkflowRunContext
 }
 
 func (action WorkflowRunAction) Run(parent env.Env) *ActionResult {
@@ -58,10 +56,10 @@ func (action WorkflowRunAction) changeWorkingDir(workflowEnv *env.NadEnv) {
 	}
 }
 
-func NewWorkflowRunAction(workflow *workflow.Workflow) *WorkflowRunAction {
+func NewWorkflowRunAction(workflow *workflow.Workflow, pPriFile *string) *WorkflowRunAction {
 	wfa := &WorkflowRunAction{
 		workflow:       *workflow,
-		workflowRunCtx: NewWorkflowRunContext(),
+		workflowRunCtx: run_context.NewWorkflowRunContext(pPriFile),
 	}
 
 	for _, job := range workflow.Jobs {
@@ -70,9 +68,36 @@ func NewWorkflowRunAction(workflow *workflow.Workflow) *WorkflowRunAction {
 	return wfa
 }
 
-func NewWorkflowRunContext() *WorkflowRunContext {
-	return &WorkflowRunContext{
-		JSCtx:    script.NewJSContext(),
-		ShellCtx: shell.NewShellContext(),
+func RunWorkflow(cmd *argparse.Command, args map[string]argparse.Arg) {
+	yml, err := argument.GetStringFromArg(args["file"], true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	wYml := *yml
+	log.Infof("run workflow file: %s", wYml)
+	ext := strings.ToLower(path.Ext(wYml))
+	if ext != ".yaml" && ext != ".yml" {
+		log.Fatalf("%s must be a yaml file", wYml)
+	}
+	fi, err := os.Stat(wYml)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if fi.IsDir() {
+		log.Fatalf("%s must be a file", wYml)
+	}
+
+	wfDef, err := workflow.ParseWorkflow(wYml)
+	if err != nil {
+		log.Fatal(err)
+	}
+	pPriFile, err := argument.GetStringFromArg(args["private"], false)
+
+	wfa := NewWorkflowRunAction(wfDef, pPriFile)
+	result := wfa.Run(env.NewOSEnv())
+	log.Infof("run workflow end, status %d", result.ReturnCode)
+
+	if result.ReturnCode != 0 {
+		log.Fatal(result.Err)
 	}
 }

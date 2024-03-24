@@ -1,7 +1,10 @@
 package workflow
 
-import "nadleeh/pkg/env"
+import (
+	"nadleeh/pkg/env"
+	"nadleeh/pkg/workflow/run_context"
+)
 
 type Action interface {
-	Run(ctx *WorkflowRunContext, env env.Env) *ActionResult
+	Run(ctx *run_context.WorkflowRunContext, env env.Env) *ActionResult
 }
