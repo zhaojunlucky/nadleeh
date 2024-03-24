@@ -1,0 +1,32 @@
+name: Nadleeh Deploy
+
+on:
+  push:
+    branches: [ "main"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Cache SonarQube packages
+      uses: actions/cache@v1
+      with:
+        path: ~/.sonar/cache
+        key: ${{ runner.os }}-sonar
+        restore-keys: ${{ runner.os }}-sonar
+    - name: Sonarqube
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_SERVER }}
+      run: |
+        curl -o /tmp/sonar.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
+        unzip -d /tmp /tmp/sonar.zip
+        /tmp/sonar-scanner-4.7.0.2747-linux/bin/sonar-scanner -Dsonar.projectKey=nadleeh -Dsonar.sources=. -Dsonar.sourceEncoding=UTF-8
+        git clean -df
