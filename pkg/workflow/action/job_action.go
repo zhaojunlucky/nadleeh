@@ -17,9 +17,11 @@ func (action JobAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env)
 	log.Infof("Run job: %s", action.job.Name)
 	parent.SetAll(action.job.Env)
 	for _, stepAction := range action.stepActions {
-		action.stepActionResults = append(action.stepActionResults, stepAction.Run(ctx, parent))
-		if action.stepActionResults[len(action.stepActionResults)-1].ReturnCode != 0 {
-			return action.stepActionResults[len(action.stepActionResults)-1]
+		ret := stepAction.Run(ctx, parent)
+		action.stepActionResults = append(action.stepActionResults, ret)
+		if ret.ReturnCode != 0 {
+			log.Errorf("Run job %s failed due to step %s failed", action.job.Name, stepAction.step.Name)
+			return ret
 		}
 	}
 	return NewActionResult(nil, 0, "")

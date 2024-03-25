@@ -1,0 +1,11 @@
+name: "test"
+
+working-dir: /Users/jun/Downloads
+
+jobs:
+  os-info:
+    steps:
+      - name: working dir
+        run: |
+          pwd
+          ls -al

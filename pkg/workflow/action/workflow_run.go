@@ -30,9 +30,11 @@ func (action WorkflowRunAction) Run(parent env.Env) *ActionResult {
 
 	log.Infof("Run workflow: %s", action.workflow.Name)
 	for _, jobAction := range action.jobActions {
-		action.jobActionResults = append(action.jobActionResults, jobAction.Run(action.workflowRunCtx, workflowEnv))
-		if action.jobActionResults[len(action.jobActionResults)-1].ReturnCode != 0 {
-			action.workflowActionResult = action.jobActionResults[len(action.jobActionResults)-1]
+		ret := jobAction.Run(action.workflowRunCtx, workflowEnv)
+		action.jobActionResults = append(action.jobActionResults, ret)
+		if ret.ReturnCode != 0 {
+			action.workflowActionResult = ret
+			log.Errorf("Run workflow %s failed due to job %s failed", action.workflow.Name, jobAction.job.Name)
 			return action.workflowActionResult
 		}
 	}
@@ -51,6 +53,11 @@ func (action WorkflowRunAction) changeWorkingDir(workflowEnv *env.NadEnv) {
 		}
 		if !fi.IsDir() {
 			log.Panicf("working directory must be a directory: %s", action.workflow.WorkingDir)
+		}
+		err = os.Chdir(action.workflow.WorkingDir)
+		if err != nil {
+			// Handle the error if the directory change fails
+			log.Panic(err)
 		}
 
 	}

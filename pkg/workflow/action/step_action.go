@@ -17,15 +17,20 @@ func (action *StepAction) Run(ctx *run_context.WorkflowRunContext, parent env.En
 	parent.SetAll(action.step.Env)
 
 	log.Infof("Run step %s", action.step.Name)
+	var ret *ActionResult
 	if action.step.RequirePlugin() {
-		return action.runWithPlugin(ctx, parent)
+		ret = action.runWithPlugin(ctx, parent)
 	} else if action.step.HasRun() {
-		return action.runWithShell(ctx, parent)
+		ret = action.runWithShell(ctx, parent)
 	} else if action.step.HasScript() {
-		return action.runWithJS(ctx, parent)
+		ret = action.runWithJS(ctx, parent)
 	} else {
 		panic(fmt.Sprintf("invalid step %s", action.step.Name))
 	}
+	if ret.ReturnCode != 0 {
+		log.Errorf("Run step %s return code: %d, error: %s", action.step.Name, ret.ReturnCode, ret.Err)
+	}
+	return ret
 }
 
 func (action *StepAction) runWithPlugin(ctx *run_context.WorkflowRunContext, parent env.Env) *ActionResult {

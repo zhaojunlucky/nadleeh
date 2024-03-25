@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/go-github/v60/github"
+	log "github.com/sirupsen/logrus"
 	"nadleeh/pkg/env"
 	"nadleeh/pkg/script"
 	"nadleeh/pkg/workflow/run_context"
@@ -11,7 +12,8 @@ import (
 	"strings"
 )
 
-const DOWNLOAD = "download-artifact"
+const Download = "download-artifact"
+const GhActionDownloadArtifact = "GH_ACTION_DOWNLOAD_ARTIFACT"
 
 type GitHubAction struct {
 	ctx          *run_context.WorkflowRunContext
@@ -39,10 +41,6 @@ func (g *GitHubAction) Run(parent env.Env) error {
 	client := github.NewClient(nil)
 	client = client.WithAuthToken(g.token)
 
-	//opt := &github.ListOptions{
-	//	Page:    100,
-	//	PerPage: 1,
-	//}
 	artifacts, _, err := client.Actions.ListArtifacts(context.Background(), g.organization, g.repository, nil)
 	if err != nil {
 		return err
@@ -68,11 +66,13 @@ func (g *GitHubAction) Run(parent env.Env) error {
 			}
 			jsHttp := script.NJSHttp{}
 			headers := map[string]string{"Accept": "application/vnd.github+json", "Authorization": fmt.Sprintf("Bearer %s", g.token), "X-GitHub-Api-Version": "2022-11-28"}
-
-			err = jsHttp.DownloadFile("GET", artiIrl, path.Join(g.path, arti.GetName()), &headers, nil)
+			artifactPath := path.Join(g.path, arti.GetName())
+			err = jsHttp.DownloadFile("GET", artiIrl, artifactPath, &headers, nil)
 			if err != nil {
 				return err
 			}
+			log.Infof("set downloaded artifact path as env %s=%s", GhActionDownloadArtifact, artifactPath)
+			parent.Set(GhActionDownloadArtifact, artifactPath)
 			break
 		}
 	}
@@ -116,8 +116,8 @@ func (g *GitHubAction) initConfig(env env.Env) error {
 		return fmt.Errorf("invalid action")
 	}
 
-	if g.action != DOWNLOAD {
-		return fmt.Errorf("invalid action, only support %s", DOWNLOAD)
+	if g.action != Download {
+		return fmt.Errorf("invalid action, only support %s", Download)
 	}
 
 	return nil
