@@ -48,6 +48,7 @@ func NewJSVm() *goja.Runtime {
 
 	vm.GlobalObject().Set("file", &NJSFile{})
 	vm.GlobalObject().Set("http", &NJSHttp{})
+	vm.GlobalObject().Set("core", &NJSCore{})
 
 	return vm
 }

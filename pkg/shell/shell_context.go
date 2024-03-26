@@ -22,7 +22,7 @@ func (sh *ShellContext) Run(env env.Env, shell string, needOutput bool) (int, st
 	if err != nil {
 		return -1, "Failed to write shell file", err
 	}
-	cmd := exec.Command("/bin/sh", "-e", tmpShFile)
+	cmd := exec.Command("/bin/bash", "-e", tmpShFile)
 
 	for key, value := range env.GetAll() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))

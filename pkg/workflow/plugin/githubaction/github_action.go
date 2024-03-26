@@ -66,7 +66,7 @@ func (g *GitHubAction) Run(parent env.Env) error {
 			}
 			jsHttp := script.NJSHttp{}
 			headers := map[string]string{"Accept": "application/vnd.github+json", "Authorization": fmt.Sprintf("Bearer %s", g.token), "X-GitHub-Api-Version": "2022-11-28"}
-			artifactPath := path.Join(g.path, arti.GetName())
+			artifactPath := path.Join(g.path, fmt.Sprintf("%s.zip", arti.GetName()))
 			err = jsHttp.DownloadFile("GET", artiIrl, artifactPath, &headers, nil)
 			if err != nil {
 				return err

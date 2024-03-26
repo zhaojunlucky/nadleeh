@@ -1,0 +1,12 @@
+name: "test"
+
+working-dir: /Users/jun/Downloads
+
+jobs:
+  os-info:
+    steps:
+      - name: js error
+        script: |
+          console.log("test js error")
+          if (!env.get("DOESNT_EXIST"))
+          throw new Error("env DOESNT_EXIST is not defined")
