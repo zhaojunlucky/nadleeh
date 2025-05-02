@@ -18,6 +18,7 @@ func (action *JobAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env
 	log.Infof("Run job: %s", action.job.Name)
 	parent.SetAll(action.job.Env)
 	jobResult := &WorkflowJobResult{jobAction: action}
+	failed := false
 	for _, stepAction := range action.stepActions {
 		if stepAction.step.HasIf() {
 			code, value, err := ctx.JSCtx.EvalBool(parent, stepAction.step.If, map[string]interface{}{
@@ -31,15 +32,18 @@ func (action *JobAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env
 				log.Infof("Skip step %s due to if condition", stepAction.step.Name)
 				continue
 			}
+		} else if failed {
+			log.Infof("Skip step %s due to previous step failed, and no if condition", stepAction.step.Name)
+			continue
 		}
 
 		ret := stepAction.Run(ctx, parent)
 
 		if ret.ReturnCode != 0 {
-			if !stepAction.step.HasContinueOnError() {
-				log.Errorf("Run job %s failed due to step %s failed", action.job.Name, stepAction.step.Name)
-				return ret
-			} else {
+
+			log.Errorf("Run job %s failed due to step %s failed", action.job.Name, stepAction.step.Name)
+
+			if stepAction.step.HasContinueOnError() {
 				code, value, err := ctx.JSCtx.EvalBool(parent, stepAction.step.ContinueOnError, map[string]interface{}{
 					"workflow": workflowResult,
 					"job":      jobResult,
@@ -51,8 +55,10 @@ func (action *JobAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env
 				} else if value {
 					log.Infof("Continue on error for job %s, step %s", action.job.Name, stepAction.step.Name)
 				} else {
-					return ret
+					failed = true
 				}
+			} else {
+				failed = true
 			}
 
 		}

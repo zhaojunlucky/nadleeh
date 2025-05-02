@@ -20,6 +20,13 @@ func (r *WorkflowResult) Failure() bool {
 	return !r.Success()
 }
 
+func (r *WorkflowResult) Reason() string {
+	if r.Failure() {
+		return r.workflowRunAction.result.Err.Error()
+	}
+	return ""
+}
+
 type WorkflowJobResult struct {
 	jobAction *JobAction
 }
