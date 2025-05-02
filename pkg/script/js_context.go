@@ -6,6 +6,8 @@ import (
 	"github.com/dop251/goja_nodejs/require"
 	"nadleeh/pkg/encrypt"
 	"nadleeh/pkg/env"
+	"nadleeh/pkg/util"
+	"reflect"
 )
 import "github.com/dop251/goja"
 
@@ -34,6 +36,37 @@ func (js *JSContext) Run(env env.Env, script string) (int, string, error) {
 		return 1, output, err
 	}
 	return 0, output, nil
+}
+
+func (js *JSContext) EvalBool(env env.Env, expression string, variables map[string]interface{}) (int, bool, error) {
+	vm := NewJSVm()
+	vm.Set("env", env)
+	vm.Set("secure", &js.JSSecCtx)
+
+	for k, v := range variables {
+		vm.Set(k, v)
+	}
+
+	val, err := vm.RunString(expression)
+
+	if err != nil {
+		return 1, false, err
+	}
+	if val != nil && val != goja.Undefined() && val != goja.Null() {
+		raw := val.Export()
+		rawType := reflect.ValueOf(raw)
+		switch rawType.Kind() {
+		case reflect.Bool:
+			return 0, rawType.Bool(), nil
+		case reflect.String:
+			return 0, util.Str2Bool(rawType.String()), err
+		case reflect.Int:
+			return 0, util.Int2Bool(rawType.Int()), nil
+		default:
+			return 1, false, fmt.Errorf("invalid output %v of expression %s", raw, expression)
+		}
+	}
+	return 1, false, fmt.Errorf("invalid expression %s, no output", expression)
 }
 
 func NewJSVm() *goja.Runtime {

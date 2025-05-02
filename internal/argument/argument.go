@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/akamensky/argparse"
 	"os"
+	"regexp"
 )
 
 func NewNadleehCliParser() *argparse.Parser {
@@ -29,6 +30,25 @@ func addRunCmd(parser *argparse.Parser) {
 		Validate: nil,
 		Help:     "Run the workflow file",
 		Default:  nil,
+	})
+
+	re := regexp.MustCompile("^[a-zA-Z0-9_]+=\\w+$")
+
+	runCmd.StringList("e", "env", &argparse.Options{
+		Required: false,
+		Validate: func(args []string) error {
+			if len(args) <= 0 {
+				return nil
+			}
+			for _, arg := range args {
+				if !re.MatchString(arg) {
+					return fmt.Errorf("invalid env %s", arg)
+				}
+			}
+			return nil
+		},
+		Help:    "Environment variables",
+		Default: nil,
 	})
 
 	runCmd.String("", "private", &argparse.Options{

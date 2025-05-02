@@ -8,13 +8,15 @@ import (
 )
 
 type Step struct {
-	Name   string
-	Id     string
-	Script string
-	Env    map[string]string
-	Run    string
-	Uses   string
-	With   map[string]string
+	Name            string
+	Id              string
+	Script          string
+	Env             map[string]string
+	ContinueOnError string `yaml:"continue-on-error"`
+	If              string
+	Run             string
+	Uses            string
+	With            map[string]string
 }
 
 func (step *Step) Validate() error {
@@ -39,4 +41,12 @@ func (step *Step) HasRun() bool {
 
 func (step *Step) RequirePlugin() bool {
 	return len(step.Uses) > 0
+}
+
+func (step *Step) HasIf() bool {
+	return len(step.If) > 0
+}
+
+func (step *Step) HasContinueOnError() bool {
+	return len(step.ContinueOnError) > 0
 }

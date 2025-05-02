@@ -50,7 +50,7 @@ func Encrypt(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
 		outputFilePath := path.Join(path.Dir(filePath), fmt.Sprintf("%s-encrypted%s", path.Base(filePath),
 			path.Ext(filePath)))
 		log.Infof("write encrypted file: %s", outputFilePath)
-		err = os.WriteFile(outputFilePath, encrypted, 0644)
+		err = os.WriteFile(outputFilePath, []byte(fmt.Sprintf("ENC(%s)", string(encrypted))), 0644)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -66,7 +66,7 @@ func Encrypt(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("entryped string is: %s\n", base64.StdEncoding.EncodeToString(encrypted))
+		fmt.Printf("entryped string is: ENC(%s)\n", base64.StdEncoding.EncodeToString(encrypted))
 		return
 	}
 	log.Fatal("invalid argument for decrypt")

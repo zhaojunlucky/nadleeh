@@ -11,53 +11,45 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strconv"
 	"time"
 )
 
-func setupLog() func() {
+var Version = "1.0.1-dev"
+
+func setupLog() {
 	if runtime.GOOS == "windows" {
-		panic("Windows is currently not supported.")
+		log.Fatal("Windows is currently not supported.")
 	}
 	logPath := "/var/log/nadleeh"
 	fiInfo, err := os.Stat(logPath)
 	if os.IsNotExist(err) {
 		err = os.MkdirAll(logPath, 0755)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 	} else if !fiInfo.IsDir() {
-		panic(fmt.Sprintf("%s must be a directory.", logPath))
+		log.Fatalf("%s must be a directory.", logPath)
 	}
 	curTime := time.Now()
 	nanoseconds := curTime.Nanosecond()
-	formattedTime := curTime.UTC().Format("20060102150405")
+	formattedTime := curTime.UTC().Format("2006-01-02-15_04_05")
 
 	logFilePath := path.Join(logPath, fmt.Sprintf("nadleeh_%s_%d.log", formattedTime, nanoseconds))
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Info("Failed to log to file, using default stderr")
-		return nil
+		return
 	}
-	mw := io.MultiWriter(logFile, os.Stdout)
-	exit := make(chan bool)
-
-	r, w, _ := os.Pipe()
-	go func() {
-		// copy all reads from pipe to multiwriter, which writes to stdout and file
-		_, _ = io.Copy(mw, r)
-		// when r or w is closed copy will finish and true will be sent to channel
-		exit <- true
-	}()
-	os.Stdout = w
-	os.Stderr = w
-	log.SetOutput(w)
-	return func() {
-		// close writer then block on exit channel | this will let mw finish writing before the program exits
-		_ = w.Close()
-		<-exit
-		// close file after all writes have finished
-		_ = logFile.Close()
-	}
+	log.SetReportCaller(true)
+	log.SetFormatter(&log.TextFormatter{
+		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
+			fileName := path.Base(frame.File) + ":" + strconv.Itoa(frame.Line)
+			//return frame.Function, fileName
+			return "", fileName
+		},
+	})
+	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
 }
 
 func createArgsMap(args []argparse.Arg) map[string]argparse.Arg {
@@ -69,10 +61,8 @@ func createArgsMap(args []argparse.Arg) map[string]argparse.Arg {
 }
 
 func main() {
-	logFunc := setupLog()
-	if logFunc != nil {
-		defer logFunc()
-	}
+	setupLog()
+	log.Infof("nadleeh %s", Version)
 
 	parser := argument.NewNadleehCliParser()
 	err := parser.Parse(os.Args)
