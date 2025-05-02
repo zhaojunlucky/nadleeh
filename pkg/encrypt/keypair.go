@@ -31,7 +31,7 @@ func GenerateKeyPair(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
 	priFile := path.Join(*pDir, fmt.Sprintf("%s-private.pem", *pName))
 	pubFile := path.Join(*pDir, fmt.Sprintf("%s-public.pem", *pName))
 
-	log.Printf("Saving public key %s", pubFile)
+	log.Infof("Saving public key %s", pubFile)
 
 	pubWriter, err := os.Create(pubFile)
 	if err != nil {
@@ -47,7 +47,7 @@ func GenerateKeyPair(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Saving private key %s", priFile)
+	log.Infof("Saving private key %s", priFile)
 
 	err = security.WriteECPrivateKey(pri, priWriter)
 	if err != nil {

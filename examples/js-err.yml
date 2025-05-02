@@ -1,12 +1,21 @@
 name: "test"
 
 working-dir: /Users/jun/Downloads
-
+env-files:
+  - tg.env
 jobs:
   os-info:
     steps:
       - name: js error
+        continue-on-error: true
         script: |
           console.log("test js error")
           if (!env.get("DOESNT_EXIST"))
           throw new Error("env DOESNT_EXIST is not defined")
+      - name: telegram message
+        if: job.failure()
+        uses: telegram
+        with:
+          key: ${TG_BOT_KEY}
+          channel: ${TG_CHANNEL}
+          message: "job failed"

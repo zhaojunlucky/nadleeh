@@ -7,8 +7,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"nadleeh/pkg/env"
 	"nadleeh/pkg/script"
+	"nadleeh/pkg/util"
 	"nadleeh/pkg/workflow/run_context"
 	"path"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -23,6 +26,7 @@ type GitHubAction struct {
 	path         string
 	token        string
 	action       string
+	pr           int
 	config       map[string]string
 }
 
@@ -37,44 +41,62 @@ func (g *GitHubAction) Run(parent env.Env) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Run GitHub Action plugin, action %s\n", g.action)
+	fmt.Printf("Run GitHub Action plugin, action %s", g.action)
 	client := github.NewClient(nil)
 	client = client.WithAuthToken(g.token)
+	var pr *github.PullRequest
+	if g.pr > 0 {
+		pr, _, err = client.PullRequests.Get(context.Background(), g.organization, g.repository, g.pr)
+		if err != nil {
+			return err
+		}
+	}
 
 	artifacts, _, err := client.Actions.ListArtifacts(context.Background(), g.organization, g.repository, nil)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("found %d artifacts for repo %s/%s first page\n", len(artifacts.Artifacts), g.organization, g.repository)
+	log.Infof("found %d artifacts for repo %s/%s first page", len(artifacts.Artifacts), g.organization, g.repository)
 	for _, arti := range artifacts.Artifacts {
 		if *arti.Expired {
-			fmt.Printf("artifact %s expired\n", arti.GetName())
+			log.Warnf("artifact %s expired", arti.GetName())
 			continue
 		}
 
-		if *arti.GetWorkflowRun().HeadBranch == g.branch {
-			fmt.Printf("found artifact %s\n", arti.GetName())
+		if len(g.branch) > 0 && *arti.GetWorkflowRun().HeadBranch != g.branch {
+			log.Warnf("artifact %s not for branch %s", arti.GetName(), g.branch)
+			continue
+		}
+		workflowRun := *arti.GetWorkflowRun()
 
-			_, _, err := g.ctx.ShellCtx.Run(parent, fmt.Sprintf("mkdir -p %s", g.path), false)
-			if err != nil {
-				return err
-			}
-			artiIrl := arti.GetArchiveDownloadURL()
-			if len(artiIrl) <= 0 {
-				fmt.Printf("invalid download url for artifact %s\n", arti.GetName())
+		if pr != nil {
+			if workflowRun.GetHeadBranch() != pr.Head.GetRef() || workflowRun.GetHeadSHA() != pr.Head.GetSHA() {
+				log.Warnf("artifact %s not for pr %d, head sha or branch not match", arti.GetName(), g.pr)
 				continue
 			}
-			jsHttp := script.NJSHttp{}
-			headers := map[string]string{"Accept": "application/vnd.github+json", "Authorization": fmt.Sprintf("Bearer %s", g.token), "X-GitHub-Api-Version": "2022-11-28"}
-			artifactPath := path.Join(g.path, fmt.Sprintf("%s.zip", arti.GetName()))
-			err = jsHttp.DownloadFile("GET", artiIrl, artifactPath, &headers, nil)
-			if err != nil {
-				return err
-			}
-			log.Infof("set downloaded artifact path as env %s=%s", GhActionDownloadArtifact, artifactPath)
-			parent.Set(GhActionDownloadArtifact, artifactPath)
-			break
 		}
+
+		log.Infof("found artifact %s", arti.GetName())
+
+		_, _, err := g.ctx.ShellCtx.Run(parent, fmt.Sprintf("mkdir -p %s", g.path), false)
+		if err != nil {
+			return err
+		}
+		artiIrl := arti.GetArchiveDownloadURL()
+		if len(artiIrl) <= 0 {
+			log.Errorf("invalid download url for artifact %s", arti.GetName())
+			continue
+		}
+		jsHttp := script.NJSHttp{}
+		headers := map[string]string{"Accept": "application/vnd.github+json", "Authorization": fmt.Sprintf("Bearer %s", g.token), "X-GitHub-Api-Version": "2022-11-28"}
+		artifactPath := path.Join(g.path, fmt.Sprintf("%s.zip", arti.GetName()))
+		err = jsHttp.DownloadFile("GET", artiIrl, artifactPath, &headers, nil)
+		if err != nil {
+			return err
+		}
+		log.Infof("set downloaded artifact path as env %s=%s", GhActionDownloadArtifact, artifactPath)
+		parent.Set(GhActionDownloadArtifact, artifactPath)
+		break
 	}
 	return nil
 }
@@ -92,9 +114,25 @@ func (g *GitHubAction) initConfig(env env.Env) error {
 	g.organization = orgRepo[0]
 	g.repository = orgRepo[1]
 
-	g.branch = env.Expand(g.config["branch"])
-	if len(g.branch) <= 0 {
-		return fmt.Errorf("invalid branch")
+	if util.HasKey(g.config, "branch") {
+		g.branch = env.Expand(g.config["branch"])
+	}
+
+	if util.HasKey(g.config, "pr") {
+		pr := env.Expand(g.config["pr"])
+
+		if len(pr) > 0 {
+			prRegex := regexp.MustCompile("\\d+")
+			if !prRegex.MatchString(pr) {
+				return fmt.Errorf("invalid pr, should be number")
+			}
+			prNum, err := strconv.ParseInt(pr, 10, 64)
+			if err != nil {
+				log.Errorf("invalid pr: %s", pr)
+				return err
+			}
+			g.pr = int(prNum)
+		}
 	}
 
 	g.path = env.Expand(g.config["path"])

@@ -3,9 +3,10 @@ name: Nadleeh CI
 on:
   pull_request:
     branches: [ "main"]
+    types: [ opened, reopened, synchronize ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -13,33 +14,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: 'Set up latest Oracle JDK 21'
-      uses: oracle-actions/setup-java@v1
+    - name: Set up Go
+      uses: actions/setup-go@v5
       with:
-        website: oracle.com
-        release: 21
-    - name: Cache SonarQube packages
-      uses: actions/cache@v1
-      with:
-        path: ~/.sonar/cache
-        key: ${{ runner.os }}-sonar
-        restore-keys: ${{ runner.os }}-sonar
-    - name: Cache Gradle packages
-      uses: actions/cache@v1
-      with:
-        path: ~/.gradle/caches
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-        restore-keys: ${{ runner.os }}-gradle
-    - name: Sonarqube
-      env:
-        HEAD_BRANCH: ${{ github.ref_name }}
-        PR_NUM: ${{ github.event.number }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_SERVER }}
+        go-version: '1.24.2'
+    - name: Build
       run: |
-        curl -o /tmp/sonar.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.7.0.2747-linux.zip
-        unzip -d /tmp /tmp/sonar.zip
-        /tmp/sonar-scanner-4.7.0.2747-linux/bin/sonar-scanner -Dsonar.pullrequest.github.repository=${{ github.repository }} -Dsonar.projectKey=nadleeh -Dsonar.sources=./src -Dsonar.sourceEncoding=UTF-8  -Dsonar.pullrequest.branch=${HEAD_BRANCH} -Dsonar.pullrequest.base=main -Dsonar.pullrequest.key=${PR_NUM}
+        echo "build apple m1"
+        env GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags "-X main.Version=1.0.${{ github.run_number }}" -o nadleeh_arm64 -v ./cmd/nadleeh
+        echo "build amd64"
+        env GOOS=linux GOARCH=amd64 go build -tags=prod -ldflags "-X main.Version=1.0.${{ github.run_number }}" -o nadleeh_amd64 -v ./cmd/nadleeh
+        tar -czvf nadleeh-PR-${{ github.event.pull_request.number }}-1.0.${{ github.run_number }}.tar.gz nadleeh_amd64 nadleeh_arm64
+    - uses: actions/checkout@v4
+      with:
+        repository: zhaojunlucky/gh-action-script
+        path: gh-action-script
+        fetch-depth: 0
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'gh-action-script/yarn.lock'
+    - name: artifacts_retention
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_PR_NUM: ${{ github.event.pull_request.number }}
+      run: |
+        cd gh-action-script
+        yarn install
+        node src/artifact/artifacts_retention.mjs
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nadleeh-PR-${{ github.event.pull_request.number }}-1.0.${{ github.run_number }}.tar.gz
+        path: nadleeh-PR-${{ github.event.pull_request.number }}-1.0.${{ github.run_number }}.tar.gz
+        
+        

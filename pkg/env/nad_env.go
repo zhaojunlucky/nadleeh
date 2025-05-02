@@ -28,7 +28,7 @@ func (env *NadEnv) Get(key string) string {
 	if val, ok := env.envs[key]; ok {
 		return val
 	}
-	return os.Getenv(key)
+	return env.Parent.Get(key)
 }
 
 func (env *NadEnv) Set(key, value string) {

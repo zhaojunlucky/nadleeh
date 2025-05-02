@@ -36,7 +36,7 @@ func (g *GoogleDrive) Init(ctx *run_context.WorkflowRunContext, config map[strin
 }
 
 func (g *GoogleDrive) Run(parent env.Env) error {
-	fmt.Println("Run Google Drive plugin")
+	log.Infof("Run Google Drive plugin")
 	err := g.validate(parent)
 	if err != nil {
 		return err
@@ -55,12 +55,12 @@ func (g *GoogleDrive) Run(parent env.Env) error {
 	res, err := srv.Files.
 		Create(f).
 		Media(file).
-		ProgressUpdater(func(now, size int64) { fmt.Printf("%d, %d\r", now, size) }).
+		ProgressUpdater(func(now, size int64) { log.Infof("%d, %d\r", now, size) }).
 		Do()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("https://drive.google.com/file/d/%s/view?usp=drive_link\n", res.Id)
+	log.Infof("https://drive.google.com/file/d/%s/view?usp=drive_link\n", res.Id)
 	return nil
 }
 

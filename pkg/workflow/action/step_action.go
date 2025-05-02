@@ -10,27 +10,27 @@ import (
 import "nadleeh/pkg/workflow/model"
 
 type StepAction struct {
-	step workflow.Step
+	step   workflow.Step
+	result *ActionResult
 }
 
 func (action *StepAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env) *ActionResult {
 	parent.SetAll(action.step.Env)
 
 	log.Infof("Run step %s", action.step.Name)
-	var ret *ActionResult
 	if action.step.RequirePlugin() {
-		ret = action.runWithPlugin(ctx, parent)
+		action.result = action.runWithPlugin(ctx, parent)
 	} else if action.step.HasRun() {
-		ret = action.runWithShell(ctx, parent)
+		action.result = action.runWithShell(ctx, parent)
 	} else if action.step.HasScript() {
-		ret = action.runWithJS(ctx, parent)
+		action.result = action.runWithJS(ctx, parent)
 	} else {
 		panic(fmt.Sprintf("invalid step %s", action.step.Name))
 	}
-	if ret.ReturnCode != 0 {
-		log.Errorf("Run step %s return code: %d, error: %s", action.step.Name, ret.ReturnCode, ret.Err)
+	if action.result.ReturnCode != 0 {
+		log.Errorf("Run step %s return code: %d, error: %s", action.step.Name, action.result.ReturnCode, action.result.Err)
 	}
-	return ret
+	return action.result
 }
 
 func (action *StepAction) runWithPlugin(ctx *run_context.WorkflowRunContext, parent env.Env) *ActionResult {
