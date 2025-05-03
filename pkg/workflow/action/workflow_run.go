@@ -20,15 +20,19 @@ type WorkflowRunAction struct {
 	workflowRunCtx *run_context.WorkflowRunContext
 }
 
-func (action *WorkflowRunAction) Run(parent env.Env) *ActionResult {
-	workflowEnv := env.NewEnv(parent, action.workflow.Env)
+func (action *WorkflowRunAction) Run(parent env.Env, args env.Env) *ActionResult {
+	workflowEnv, err := InterpretEnv(&action.workflowRunCtx.JSCtx, parent, action.workflow.Env, map[string]interface{}{"arg": args})
+	if err != nil {
+		log.Errorf("Failed to interpret env %v", err)
+		return NewActionResult(err, 1, "")
+	}
 	action.changeWorkingDir(workflowEnv)
-
-	worflowResult := &WorkflowResult{workflowRunAction: action}
 
 	log.Infof("Run workflow: %s", action.workflow.Name)
 	for _, jobAction := range action.jobActions {
-		ret := jobAction.Run(action.workflowRunCtx, workflowEnv, worflowResult)
+		actionCtx := &ActionContext{Args: args, WorkflowResult: &WorkflowResult{workflowRunAction: action}}
+		jobEnv := env.NewEnv(workflowEnv, nil) // every job has its own env
+		ret := jobAction.Run(action.workflowRunCtx, jobEnv, actionCtx)
 		if ret.ReturnCode != 0 {
 			action.result = ret
 			log.Errorf("Run workflow %s failed due to job %s failed", action.workflow.Name, jobAction.job.Name)
@@ -72,27 +76,12 @@ func NewWorkflowRunAction(workflow *workflow.Workflow, pPriFile *string) *Workfl
 	return wfa
 }
 
-func createWorkflowEnv(args map[string]argparse.Arg) *env.NadEnv {
-	wfEnv := env.NewEnv(env.NewOSEnv(), nil)
-	if envArg, ok := args["env"]; ok && envArg.GetParsed() {
-		argList := envArg.GetResult().(*[]string)
-		for _, arg := range *argList {
-			key, value, found := strings.Cut(arg, "=")
-			if !found {
-				continue
-			}
-			wfEnv.Set(strings.TrimSpace(key), strings.TrimSpace(value))
-		}
-	}
-	return wfEnv
-}
-
-func RunWorkflow(cmd *argparse.Command, args map[string]argparse.Arg) {
+func RunWorkflow(cmd *argparse.Command, args map[string]argparse.Arg, argEnv env.Env) {
 	yml, err := argument.GetStringFromArg(args["file"], true)
 	if err != nil {
 		log.Fatalf("failed to get yaml file arg %v", err)
 	}
-	wfEnv := createWorkflowEnv(args)
+	wfEnv := env.NewOSEnv()
 	wYml := *yml
 	log.Infof("run workflow file: %s", wYml)
 	ext := strings.ToLower(path.Ext(wYml))
@@ -114,7 +103,7 @@ func RunWorkflow(cmd *argparse.Command, args map[string]argparse.Arg) {
 	pPriFile, err := argument.GetStringFromArg(args["private"], false)
 
 	wfa := NewWorkflowRunAction(wfDef, pPriFile)
-	result := wfa.Run(wfEnv)
+	result := wfa.Run(wfEnv, argEnv)
 	log.Infof("run workflow end, status %d", result.ReturnCode)
 
 	if result.ReturnCode != 0 {

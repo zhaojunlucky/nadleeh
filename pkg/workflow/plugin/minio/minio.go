@@ -29,9 +29,9 @@ func (m *Minio) Init(ctx *run_context.WorkflowRunContext, config map[string]stri
 	return nil
 }
 
-func (m *Minio) Run(parent env.Env) error {
+func (m *Minio) Run(parent env.Env, variables map[string]interface{}) error {
 	log.Infof("Run minio plugin")
-	err := m.validate(parent)
+	err := m.validate(parent, variables)
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,13 @@ func (m *Minio) Run(parent env.Env) error {
 
 }
 
-func (m *Minio) validate(parent env.Env) error {
+func (m *Minio) validate(parent env.Env, variables map[string]interface{}) error {
+	var err error
+	m.config, err = run_context.InterpretPluginCfg(m.ctx, parent, m.config, variables)
+	if err != nil {
+		return err
+	}
+
 	m.URL = parent.Expand(m.config["url"])
 	if len(m.URL) <= 0 {
 		return fmt.Errorf("invalid url")

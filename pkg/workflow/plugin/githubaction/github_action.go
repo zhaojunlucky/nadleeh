@@ -36,8 +36,8 @@ func (g *GitHubAction) Init(ctx *run_context.WorkflowRunContext, config map[stri
 	return nil
 }
 
-func (g *GitHubAction) Run(parent env.Env) error {
-	err := g.initConfig(parent)
+func (g *GitHubAction) Run(parent env.Env, variables map[string]interface{}) error {
+	err := g.initConfig(parent, variables)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,13 @@ func (g *GitHubAction) Run(parent env.Env) error {
 	return nil
 }
 
-func (g *GitHubAction) initConfig(env env.Env) error {
+func (g *GitHubAction) initConfig(env env.Env, variables map[string]interface{}) error {
+	var err error
+	g.config, err = run_context.InterpretPluginCfg(g.ctx, env, g.config, variables)
+	if err != nil {
+		return err
+	}
+
 	g.repository = env.Expand(g.config["repository"])
 	if len(g.repository) <= 0 {
 		return fmt.Errorf("invalid repository")

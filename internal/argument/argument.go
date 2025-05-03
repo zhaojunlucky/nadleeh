@@ -34,7 +34,7 @@ func addRunCmd(parser *argparse.Parser) {
 
 	re := regexp.MustCompile("^[a-zA-Z0-9_]+=\\w+$")
 
-	runCmd.StringList("e", "env", &argparse.Options{
+	runCmd.StringList("a", "arg", &argparse.Options{
 		Required: false,
 		Validate: func(args []string) error {
 			if len(args) <= 0 {
@@ -42,12 +42,12 @@ func addRunCmd(parser *argparse.Parser) {
 			}
 			for _, arg := range args {
 				if !re.MatchString(arg) {
-					return fmt.Errorf("invalid env %s", arg)
+					return fmt.Errorf("invalid argment %s", arg)
 				}
 			}
 			return nil
 		},
-		Help:    "Environment variables",
+		Help:    "Arguments variables",
 		Default: nil,
 	})
 

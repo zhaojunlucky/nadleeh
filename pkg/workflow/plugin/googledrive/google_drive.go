@@ -35,9 +35,9 @@ func (g *GoogleDrive) Init(ctx *run_context.WorkflowRunContext, config map[strin
 	return nil
 }
 
-func (g *GoogleDrive) Run(parent env.Env) error {
+func (g *GoogleDrive) Run(parent env.Env, variables map[string]interface{}) error {
 	log.Infof("Run Google Drive plugin")
-	err := g.validate(parent)
+	err := g.validate(parent, variables)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,13 @@ func (g *GoogleDrive) ServiceAccount(credentialFile string) *http.Client {
 	return client
 }
 
-func (g *GoogleDrive) validate(parent env.Env) error {
+func (g *GoogleDrive) validate(parent env.Env, variables map[string]interface{}) error {
+	var err error
+	g.config, err = run_context.InterpretPluginCfg(g.ctx, parent, g.config, variables)
+	if err != nil {
+		return err
+	}
+
 	g.name = parent.Expand(g.config["name"])
 	if len(g.name) <= 0 {
 		return fmt.Errorf("invalid name")

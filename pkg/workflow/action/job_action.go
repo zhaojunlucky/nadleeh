@@ -14,19 +14,23 @@ type JobAction struct {
 	result      *ActionResult
 }
 
-func (action *JobAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env, workflowResult *WorkflowResult) *ActionResult {
+func (action *JobAction) Run(ctx *run_context.WorkflowRunContext, parent *env.NadEnv, actionCtx *ActionContext) *ActionResult {
 	log.Infof("Run job: %s", action.job.Name)
-	parent.SetAll(action.job.Env)
-	jobResult := &WorkflowJobResult{jobAction: action}
+
+	jobEnv, err := InterpretEnv(&ctx.JSCtx, parent, action.job.Env, actionCtx.GenerateEnv())
+	if err != nil {
+		log.Errorf("Failed to interpret job env %v", err)
+		action.result = NewActionResult(err, 1, "")
+		return action.result
+	}
+
+	actionCtx.JobResult = &WorkflowJobResult{jobAction: action}
 	failed := false
 	for _, stepAction := range action.stepActions {
 		if stepAction.step.HasIf() {
-			code, value, err := ctx.JSCtx.EvalBool(parent, stepAction.step.If, map[string]interface{}{
-				"workflow": workflowResult,
-				"job":      jobResult,
-			})
+			value, err := ctx.JSCtx.EvalBool(jobEnv, stepAction.step.If, actionCtx.GenerateEnv())
 			if err != nil {
-				log.Errorf("Failed to eval if for job %s, step %s, code %d", action.job.Name, stepAction.step.Name, code)
+				log.Errorf("Failed to eval if for job %s, step %s", action.job.Name, stepAction.step.Name)
 				return NewActionResult(err, stepAction.result.ReturnCode, "")
 			} else if !value {
 				log.Infof("Skip step %s due to if condition", stepAction.step.Name)
@@ -37,20 +41,17 @@ func (action *JobAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env
 			continue
 		}
 
-		ret := stepAction.Run(ctx, parent)
+		ret := stepAction.Run(ctx, jobEnv, actionCtx)
 
 		if ret.ReturnCode != 0 {
 
 			log.Errorf("Run job %s failed due to step %s failed", action.job.Name, stepAction.step.Name)
 
 			if stepAction.step.HasContinueOnError() {
-				code, value, err := ctx.JSCtx.EvalBool(parent, stepAction.step.ContinueOnError, map[string]interface{}{
-					"workflow": workflowResult,
-					"job":      jobResult,
-				})
+				value, err := ctx.JSCtx.EvalBool(jobEnv, stepAction.step.ContinueOnError, actionCtx.GenerateEnv())
 				if err != nil {
-					log.Errorf("Failed to eval continue-on-error for job %s, step %s, code %d", action.job.Name,
-						stepAction.step.Name, code)
+					log.Errorf("Failed to eval continue-on-error for job %s, step %s", action.job.Name,
+						stepAction.step.Name)
 					return NewActionResult(errors.Join(err, ret.Err), ret.ReturnCode, ret.Output)
 				} else if value {
 					log.Infof("Continue on error for job %s, step %s", action.job.Name, stepAction.step.Name)

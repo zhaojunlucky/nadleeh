@@ -14,16 +14,21 @@ type StepAction struct {
 	result *ActionResult
 }
 
-func (action *StepAction) Run(ctx *run_context.WorkflowRunContext, parent env.Env) *ActionResult {
-	parent.SetAll(action.step.Env)
+func (action *StepAction) Run(ctx *run_context.WorkflowRunContext, parent *env.NadEnv, actionCtx *ActionContext) *ActionResult {
+	err := InterpretEnvSelf(&ctx.JSCtx, parent, action.step.Env, actionCtx.GenerateEnv())
+	if err != nil {
+		log.Errorf("Failed to interpret step env %v", err)
+		action.result = NewActionResult(err, 1, "")
+		return action.result
+	}
 
 	log.Infof("Run step %s", action.step.Name)
 	if action.step.RequirePlugin() {
-		action.result = action.runWithPlugin(ctx, parent)
+		action.result = action.runWithPlugin(ctx, parent, actionCtx)
 	} else if action.step.HasRun() {
-		action.result = action.runWithShell(ctx, parent)
+		action.result = action.runWithShell(ctx, parent, actionCtx)
 	} else if action.step.HasScript() {
-		action.result = action.runWithJS(ctx, parent)
+		action.result = action.runWithJS(ctx, parent, actionCtx)
 	} else {
 		panic(fmt.Sprintf("invalid step %s", action.step.Name))
 	}
@@ -33,7 +38,7 @@ func (action *StepAction) Run(ctx *run_context.WorkflowRunContext, parent env.En
 	return action.result
 }
 
-func (action *StepAction) runWithPlugin(ctx *run_context.WorkflowRunContext, parent env.Env) *ActionResult {
+func (action *StepAction) runWithPlugin(ctx *run_context.WorkflowRunContext, parent env.Env, actionCtx *ActionContext) *ActionResult {
 	plug := plugin.NewPlugin(action.step.Uses)
 	if plug == nil {
 		return NewActionResult(fmt.Errorf("invalid plugin %s", action.step.Uses), 0, "")
@@ -42,15 +47,21 @@ func (action *StepAction) runWithPlugin(ctx *run_context.WorkflowRunContext, par
 	if err != nil {
 		return NewActionResult(err, 1, "")
 	}
-	err = plug.Run(parent)
+	err = plug.Run(parent, actionCtx.GenerateEnv())
 	if err != nil {
 		return NewActionResult(err, 1, "")
 	}
 	return NewActionResult(nil, 0, "")
 }
 
-func (action *StepAction) runWithShell(ctx *run_context.WorkflowRunContext, parent env.Env) *ActionResult {
-	ret, output, err := ctx.ShellCtx.Run(parent, action.step.Run, action.needOutput())
+func (action *StepAction) runWithShell(ctx *run_context.WorkflowRunContext, parent env.Env, actionCtx *ActionContext) *ActionResult {
+	run, err := ctx.JSCtx.EvalActionScript(parent, action.step.Run, actionCtx.GenerateEnv())
+	if err != nil {
+		log.Errorf("Failed to eval run for step %s", action.step.Name)
+		return NewActionResult(err, 1, "")
+	}
+
+	ret, output, err := ctx.ShellCtx.Run(parent, run, action.needOutput())
 	return NewActionResult(err, ret, output)
 }
 
@@ -58,8 +69,8 @@ func (action *StepAction) needOutput() bool {
 	return false
 }
 
-func (action *StepAction) runWithJS(ctx *run_context.WorkflowRunContext, parent env.Env) *ActionResult {
-	ret, output, err := ctx.JSCtx.Run(parent, action.step.Script)
+func (action *StepAction) runWithJS(ctx *run_context.WorkflowRunContext, parent env.Env, actionCtx *ActionContext) *ActionResult {
+	ret, output, err := ctx.JSCtx.Run(parent, action.step.Script, actionCtx.GenerateEnv())
 	return NewActionResult(err, ret, output)
 }
 

@@ -13,7 +13,7 @@ var SupportedPlugins = []string{"google-drive", "github-actions", "telegram", "m
 
 type Plugin interface {
 	Init(ctx *run_context.WorkflowRunContext, config map[string]string) error
-	Run(parent env.Env) error
+	Run(parent env.Env, variables map[string]interface{}) error
 }
 
 func NewPlugin(name string) Plugin {

@@ -23,9 +23,9 @@ func (t *Telegram) Init(ctx *run_context.WorkflowRunContext, config map[string]s
 	return nil
 }
 
-func (g *Telegram) Run(parent env.Env) error {
+func (g *Telegram) Run(parent env.Env, variables map[string]interface{}) error {
 	log.Infof("Run telegram plugin")
-	err := g.validate(parent)
+	err := g.validate(parent, variables)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,12 @@ func (g *Telegram) Run(parent env.Env) error {
 	return nil
 }
 
-func (g *Telegram) validate(parent env.Env) error {
+func (g *Telegram) validate(parent env.Env, variables map[string]interface{}) error {
+	var err error
+	g.config, err = run_context.InterpretPluginCfg(g.ctx, parent, g.config, variables)
+	if err != nil {
+		return err
+	}
 	g.tgBotKey = parent.Expand(g.config["key"])
 	if len(g.tgBotKey) <= 0 {
 		return fmt.Errorf("invalid tg-bot-key")
