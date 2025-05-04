@@ -14,7 +14,9 @@ jobs:
           action: download-artifact
           repository: zhaojunlucky/gundam
           path: ${BACK_BASE_DIR}/artifact
-          pr: ${pr}
+          pr: ${{ arg.pr }}
+          artifact-path-env: "GH_GUNDAM_ACITON_ARTIFACT_PATH"
           token: ${GH_TOKEN}
       - run: |
           ls -al ${BACK_BASE_DIR}/artifact
+          ls ${GH_GUNDAM_ACITON_ARTIFACT_PATH}

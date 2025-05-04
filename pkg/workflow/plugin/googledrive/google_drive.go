@@ -60,7 +60,7 @@ func (g *GoogleDrive) Run(parent env.Env, variables map[string]interface{}) erro
 	if err != nil {
 		return err
 	}
-	log.Infof("https://drive.google.com/file/d/%s/view?usp=drive_link\n", res.Id)
+	log.Infof("https://drive.google.com/file/d/%s/view?usp=drive_link", res.Id)
 	return nil
 }
 

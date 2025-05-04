@@ -19,15 +19,16 @@ const Download = "download-artifact"
 const GhActionDownloadArtifact = "GH_ACTION_DOWNLOAD_ARTIFACT"
 
 type GitHubAction struct {
-	ctx          *run_context.WorkflowRunContext
-	organization string
-	repository   string
-	branch       string
-	path         string
-	token        string
-	action       string
-	pr           int
-	config       map[string]string
+	ctx             *run_context.WorkflowRunContext
+	organization    string
+	repository      string
+	branch          string
+	path            string
+	token           string
+	action          string
+	pr              int
+	artifactPathEnv string
+	config          map[string]string
 }
 
 func (g *GitHubAction) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
@@ -94,8 +95,12 @@ func (g *GitHubAction) Run(parent env.Env, variables map[string]interface{}) err
 		if err != nil {
 			return err
 		}
-		log.Infof("set downloaded artifact path as env %s=%s", GhActionDownloadArtifact, artifactPath)
-		parent.Set(GhActionDownloadArtifact, artifactPath)
+		artiEnv := GhActionDownloadArtifact
+		if len(g.artifactPathEnv) > 0 {
+			artiEnv = g.artifactPathEnv
+		}
+		log.Infof("set downloaded artifact path as env %s=%s", artiEnv, artifactPath)
+		parent.Set(artiEnv, artifactPath)
 		break
 	}
 	return nil
@@ -122,6 +127,10 @@ func (g *GitHubAction) initConfig(env env.Env, variables map[string]interface{})
 
 	if util.HasKey(g.config, "branch") {
 		g.branch = env.Expand(g.config["branch"])
+	}
+
+	if util.HasKey(g.config, "artifact-path-env") {
+		g.artifactPathEnv = env.Expand(g.config["artifact-path-env"])
 	}
 
 	if util.HasKey(g.config, "pr") {

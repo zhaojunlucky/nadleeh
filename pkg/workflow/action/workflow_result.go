@@ -21,9 +21,24 @@ func (r *WorkflowResult) Failure() bool {
 }
 
 func (r *WorkflowResult) Reason() string {
-	if r.Failure() {
+	if r.workflowRunAction.result != nil && r.workflowRunAction.result.Err != nil {
 		return r.workflowRunAction.result.Err.Error()
 	}
+
+	for _, job := range r.workflowRunAction.jobActions {
+		if job.result != nil && job.result.Err != nil {
+			return job.result.Err.Error()
+		}
+
+		for _, step := range job.stepActions {
+			if step.result.Skipped || step.result == nil || step.result.Err == nil {
+				continue
+			} else {
+				return step.result.Err.Error()
+			}
+		}
+	}
+
 	return ""
 }
 
@@ -41,6 +56,22 @@ func (r *WorkflowJobResult) Success() bool {
 		}
 	}
 	return true
+}
+
+func (r *WorkflowJobResult) Reason() string {
+	if r.jobAction.result != nil && r.jobAction.result.Err != nil {
+		return r.jobAction.result.Err.Error()
+	}
+
+	for _, step := range r.jobAction.stepActions {
+		if step.result.Skipped || step.result == nil || step.result.Err == nil {
+			continue
+		} else {
+			return step.result.Err.Error()
+		}
+	}
+
+	return ""
 }
 
 func (r *WorkflowJobResult) Failure() bool {

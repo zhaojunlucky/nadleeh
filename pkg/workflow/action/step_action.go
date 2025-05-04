@@ -14,11 +14,52 @@ type StepAction struct {
 	result *ActionResult
 }
 
-func (action *StepAction) Run(ctx *run_context.WorkflowRunContext, parent *env.NadEnv, actionCtx *ActionContext) *ActionResult {
+func (action *StepAction) EvalIf(ctx *run_context.WorkflowRunContext, parent *env.NadEnv, actionCtx *ActionContext) (bool, error) {
+	value, err := ctx.JSCtx.EvalActionScriptBool(parent, action.step.If, actionCtx.GenerateEnv())
+	if err != nil {
+		log.Errorf("Failed to eval if for step %s, error: %v", action.step.Name, err)
+		return false, err
+	}
+
+	log.Infof("If is %v for step %s", value, action.step.Name)
+	return value, nil
+}
+
+func (action *StepAction) EvalContinueOnError(ctx *run_context.WorkflowRunContext, parent *env.NadEnv, actionCtx *ActionContext) (bool, error) {
+
+	value, err := ctx.JSCtx.EvalActionScriptBool(parent, action.step.ContinueOnError, actionCtx.GenerateEnv())
+	if err != nil {
+		log.Errorf("Failed to eval continue-on-error for step %s, error: %v", action.step.Name, err)
+		return false, err
+	}
+	log.Infof("Continue on error is %v for step %s", value, action.step.Name)
+	return value, err
+}
+
+func (action *StepAction) Run(ctx *run_context.WorkflowRunContext, parent *env.NadEnv, actionCtx *ActionContext, failed bool) *ActionResult {
+	action.result = NewEmptyActionResult()
+	if action.step.HasIf() {
+		runStep, err := action.EvalIf(ctx, parent, actionCtx)
+		if err != nil {
+			action.result.Set(err, 1, "")
+			action.result.If = IfEvalErr
+			return action.result
+		}
+		if !runStep {
+			action.result.If = IfNotMatched
+			return action.result
+		}
+		action.result.If = IfMatched
+	} else if failed {
+		log.Infof("Skip step %s, due to previous step failed", action.step.Name)
+		action.result.Skipped = true
+		return action.result
+	}
+
 	err := InterpretEnvSelf(&ctx.JSCtx, parent, action.step.Env, actionCtx.GenerateEnv())
 	if err != nil {
 		log.Errorf("Failed to interpret step env %v", err)
-		action.result = NewActionResult(err, 1, "")
+		action.result.Set(err, 1, "")
 		return action.result
 	}
 
@@ -34,6 +75,21 @@ func (action *StepAction) Run(ctx *run_context.WorkflowRunContext, parent *env.N
 	}
 	if action.result.ReturnCode != 0 {
 		log.Errorf("Run step %s return code: %d, error: %s", action.step.Name, action.result.ReturnCode, action.result.Err)
+	}
+	action.result.Set(action.result.Err, action.result.ReturnCode, action.result.Output)
+
+	if action.step.HasContinueOnError() {
+		value, err := action.EvalContinueOnError(ctx, parent, actionCtx)
+		if err != nil {
+			action.result.ContinueOnErr = ContinueOnErrEvalErr
+			action.result.Set(err, 1, "")
+			return action.result
+		}
+		if value {
+			action.result.ContinueOnErr = ContinueOnErrMatched
+			return action.result
+		}
+		action.result.ContinueOnErr = ContinueOnErrNotMatched
 	}
 	return action.result
 }
@@ -55,7 +111,7 @@ func (action *StepAction) runWithPlugin(ctx *run_context.WorkflowRunContext, par
 }
 
 func (action *StepAction) runWithShell(ctx *run_context.WorkflowRunContext, parent env.Env, actionCtx *ActionContext) *ActionResult {
-	run, err := ctx.JSCtx.EvalActionScript(parent, action.step.Run, actionCtx.GenerateEnv())
+	run, err := ctx.JSCtx.EvalActionScriptStr(parent, action.step.Run, actionCtx.GenerateEnv())
 	if err != nil {
 		log.Errorf("Failed to eval run for step %s", action.step.Name)
 		return NewActionResult(err, 1, "")

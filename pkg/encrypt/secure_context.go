@@ -41,6 +41,10 @@ func NewSecureContext(priFile *string) SecureContext {
 	}
 }
 
+func (s SecureContext) HasPrivateKey() bool {
+	return s.privateKey != nil
+}
+
 func (s SecureContext) IsEncrypted(str string) bool {
 	str = strings.TrimSpace(str)
 

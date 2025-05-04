@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"errors"
 	log "github.com/sirupsen/logrus"
 	"nadleeh/pkg/env"
 	"nadleeh/pkg/workflow/model"
@@ -27,41 +26,23 @@ func (action *JobAction) Run(ctx *run_context.WorkflowRunContext, parent *env.Na
 	actionCtx.JobResult = &WorkflowJobResult{jobAction: action}
 	failed := false
 	for _, stepAction := range action.stepActions {
-		if stepAction.step.HasIf() {
-			value, err := ctx.JSCtx.EvalBool(jobEnv, stepAction.step.If, actionCtx.GenerateEnv())
-			if err != nil {
-				log.Errorf("Failed to eval if for job %s, step %s", action.job.Name, stepAction.step.Name)
-				return NewActionResult(err, stepAction.result.ReturnCode, "")
-			} else if !value {
-				log.Infof("Skip step %s due to if condition", stepAction.step.Name)
-				continue
-			}
-		} else if failed {
-			log.Infof("Skip step %s due to previous step failed, and no if condition", stepAction.step.Name)
-			continue
-		}
 
-		ret := stepAction.Run(ctx, jobEnv, actionCtx)
+		ret := stepAction.Run(ctx, jobEnv, actionCtx, failed)
 
 		if ret.ReturnCode != 0 {
-
 			log.Errorf("Run job %s failed due to step %s failed", action.job.Name, stepAction.step.Name)
-
-			if stepAction.step.HasContinueOnError() {
-				value, err := ctx.JSCtx.EvalBool(jobEnv, stepAction.step.ContinueOnError, actionCtx.GenerateEnv())
-				if err != nil {
-					log.Errorf("Failed to eval continue-on-error for job %s, step %s", action.job.Name,
-						stepAction.step.Name)
-					return NewActionResult(errors.Join(err, ret.Err), ret.ReturnCode, ret.Output)
-				} else if value {
-					log.Infof("Continue on error for job %s, step %s", action.job.Name, stepAction.step.Name)
-				} else {
-					failed = true
-				}
-			} else {
+			if ret.If == IfEvalErr || ret.ContinueOnErr == ContinueOnErrEvalErr {
+				log.Errorf("Failed to eval if or continue-on-error for step %s, fail fast", stepAction.step.Name)
+				action.result = ret
+				return action.result
+			}
+			if ret.ContinueOnErr == ContinueOnErrMatched {
+				log.Infof("Continue on error matched for step %s", stepAction.step.Name)
+				continue
+			} else if ret.ContinueOnErr != NoContinueOnError {
+				log.Errorf("set failed flag to true due to step %s failed, and it has no continue-on-error set", stepAction.step.Name)
 				failed = true
 			}
-
 		}
 	}
 	return NewActionResult(nil, 0, "")

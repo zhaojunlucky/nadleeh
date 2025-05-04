@@ -106,7 +106,31 @@ func (js *JSContext) EvalStr(env env.Env, expression string, variables map[strin
 	return "", fmt.Errorf("invalid expression %s, no output", expression)
 }
 
-func (js *JSContext) EvalActionScript(env env.Env, expression string, variables map[string]interface{}) (string, error) {
+func (js *JSContext) EvalActionScriptBool(env env.Env, expression string, variables map[string]interface{}) (bool, error) {
+	scanner := js_token.JSTokenScanner{}
+
+	tokens, err := scanner.Scan(expression)
+	if err != nil {
+		log.Errorf("Failed to scan %s: %v", expression, err)
+		return false, err
+	}
+
+	if len(tokens) == 0 {
+		return false, fmt.Errorf("invalid empty expression %s", expression)
+	}
+
+	if len(tokens) > 1 || tokens[0].Type == js_token.RawString {
+		return false, fmt.Errorf("invalid expression %s, only one expression is allowed", expression)
+	}
+	val, err := js.EvalBool(env, tokens[0].Value, variables)
+	if err != nil {
+		log.Errorf("Failed to eval %s: %v", tokens[0].Value, err)
+		return false, err
+	}
+	return val, nil
+}
+
+func (js *JSContext) EvalActionScriptStr(env env.Env, expression string, variables map[string]interface{}) (string, error) {
 	scanner := js_token.JSTokenScanner{}
 
 	tokens, err := scanner.Scan(expression)

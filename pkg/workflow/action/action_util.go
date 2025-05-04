@@ -11,7 +11,7 @@ func InterpretEnv(jsContext *script.JSContext, parent env.Env, envs map[string]s
 		return nadEnv, nil
 	}
 	for k, v := range envs {
-		val, err := jsContext.EvalActionScript(nadEnv, v, variables)
+		val, err := jsContext.EvalActionScriptStr(nadEnv, v, variables)
 		if err != nil {
 			return nil, err
 		}
@@ -26,7 +26,7 @@ func InterpretEnvSelf(jsContext *script.JSContext, parent *env.NadEnv, envs map[
 		return nil
 	}
 	for k, v := range envs {
-		val, err := jsContext.EvalActionScript(parent, v, variables)
+		val, err := jsContext.EvalActionScriptStr(parent, v, variables)
 		if err != nil {
 			return err
 		}
