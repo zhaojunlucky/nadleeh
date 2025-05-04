@@ -3,6 +3,11 @@ name: "test"
 working-dir: /Users/jun/Downloads
 env-files:
   - tg.env
+checks:
+  private-key: false # whether to use private key
+  envs: # only for global env, not work for job/step env
+    - name: TG_BOT_KEY
+      pattern: ".+"
 jobs:
   os-info:
     steps:
