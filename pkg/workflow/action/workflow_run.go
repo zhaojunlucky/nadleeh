@@ -126,7 +126,6 @@ func RunWorkflow(cmd *argparse.Command, args map[string]argparse.Arg, argEnv env
 	if err != nil {
 		log.Fatalf("failed to get yaml file arg %v", err)
 	}
-	wfEnv := env.NewOSEnv()
 	wYml := *yml
 	log.Infof("run workflow file: %s", wYml)
 	ext := strings.ToLower(path.Ext(wYml))
@@ -146,7 +145,7 @@ func RunWorkflow(cmd *argparse.Command, args map[string]argparse.Arg, argEnv env
 		log.Fatalf("failed to parse workflow %v", err)
 	}
 	pPriFile, err := argument.GetStringFromArg(args["private"], false)
-
+	wfEnv := env.NewEnv(nil, wfDef.Env)
 	wfa := NewWorkflowRunAction(wfDef, pPriFile)
 	err = wfa.Validate(wfEnv, argEnv, checks)
 	if err != nil {
