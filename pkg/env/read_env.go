@@ -1,6 +1,7 @@
 package env
 
 import (
+	"nadleeh/pkg/util"
 	"os"
 	"strings"
 )
@@ -8,7 +9,7 @@ import (
 var OSEnv = NewOSEnv()
 
 type NadReadEnv struct {
-	Parent *Env
+	Parent Env
 	envs   map[string]string
 }
 
@@ -18,6 +19,14 @@ func NewOSEnv() Env {
 		envs:   make(map[string]string),
 	}
 	env.initOSEnv()
+	return &env
+}
+
+func NewReadEnv(parent Env, envs map[string]string) Env {
+	env := NadReadEnv{
+		Parent: parent,
+		envs:   envs,
+	}
 	return &env
 }
 
@@ -39,24 +48,16 @@ func (env *NadReadEnv) Get(key string) string {
 }
 
 func (env *NadReadEnv) GetAll() map[string]string {
-	envs := make(map[string]string)
-
-	for key, value := range env.envs {
-		envs[key] = value
-	}
-	for _, envStr := range os.Environ() {
-		key, value, found := strings.Cut(envStr, "=")
-		if !found {
-			continue
-		}
-
-		if _, ok := env.envs[key]; !ok {
-			envs[key] = value
+	newEnv := util.CopyMap(env.envs)
+	if env.Parent != nil {
+		for key, value := range env.Parent.GetAll() {
+			if _, ok := newEnv[key]; ok {
+				continue
+			}
+			newEnv[key] = value
 		}
 	}
-
-	return envs
-
+	return newEnv
 }
 
 func (env *NadReadEnv) Set(key, value string) {

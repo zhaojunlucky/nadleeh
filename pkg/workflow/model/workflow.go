@@ -20,8 +20,19 @@ type Workflow struct {
 	WorkingDir string
 }
 
+type WorkflowArg struct {
+	Name    string `yaml:"name"`
+	Pattern string `yaml:"pattern"`
+}
+
+type WorkflowCheck struct {
+	PrivateKey bool          `yaml:"private-key"`
+	Args       []WorkflowArg `yaml:"args"`
+	Envs       []WorkflowArg `yaml:"envs"`
+}
 type workflowDefinition struct {
 	Name       string
+	Checks     WorkflowCheck `yaml:"checks"`
 	Version    string
 	EnvFiles   []string `yaml:"env-files"`
 	Env        map[string]string
@@ -73,19 +84,19 @@ func parseEnv(env map[string]string, envFiles []string) (map[string]string, erro
 	return env, nil
 }
 
-func ParseWorkflow(filePath string) (*Workflow, error) {
+func ParseWorkflow(filePath string) (*Workflow, *WorkflowCheck, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer file.Close()
 	var rawWorkflow workflowDefinition
 	if err := yaml.NewDecoder(file).Decode(&rawWorkflow); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	wfEnv, err := parseEnv(rawWorkflow.Env, rawWorkflow.EnvFiles)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	workflow := &Workflow{
 		Name:       rawWorkflow.Name,
@@ -104,16 +115,16 @@ func ParseWorkflow(filePath string) (*Workflow, error) {
 
 		err := rawWorkflow.Jobs.Content[i+1].Decode(&job)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse job %s: %w", job.Name, err)
+			return nil, nil, fmt.Errorf("failed to parse job %s: %w", job.Name, err)
 		}
 
 		workflow.Jobs = append(workflow.Jobs, job)
 	}
 	err = workflow.validate()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return workflow, nil
+	return workflow, &rawWorkflow.Checks, nil
 }
 
 func (w *Workflow) validate() error {

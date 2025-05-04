@@ -1,0 +1,51 @@
+name: "full workflow" # workflow name
+working-dir: /Users/jun/Downloads
+env-files:
+  - deploy.env
+env:
+  BACK_BASE_DIR: ~/backup/ # environment variable
+
+checks:
+  private-key: false # whether to use private key
+  args:
+    - name: pr
+      pattern: "\\d+" # value match regex
+    - name: pr2 # any value
+  envs: # only for global env, not work for job/step env
+    - name: TG_BOT_KEY
+      pattern: ".+"
+
+
+jobs:
+  backup-nginx:
+    steps:
+      - name: get date
+        id: date
+        script: | # javascript
+          const curDate = new Date()
+          const dateStr = curDate.toString()
+          env.set('BACK_DIR') = `${env.get('BACK_BASE_DIR')}/${dateStr}`
+      - run: | # bash
+          NG=$BACK_DIR/nginx
+          mkdir -p $NG
+          cp /etc/nginx/nginx.conf $NG
+          cp -r /etc/nginx/site-availables $NG
+          tar -cvf $BACK_DIR.tar $BACK_DIR
+      - name: upload google drive
+        uses: google-drive
+        with:
+          name: $BACK_DIR.tar
+          path: $BACK_DIR.tar
+          cred: gdrive-cred.json
+          remote-path: 1HH9HdCPiIhzCbdfYzB5UFmvLZ9xu0OVo
+      - name: telegram message
+        if: ${{ job.failure() }}
+        uses: telegram
+        with:
+          key: ${TG_BOT_KEY} # or ${{ env.TG_BOT_KEY }}
+          channel: ${TG_CHANNEL}
+          message: "job failed ${{ workflow.reason() }}"
+
+
+
+

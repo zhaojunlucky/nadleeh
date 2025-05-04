@@ -7,11 +7,14 @@ import (
 	"io"
 	"nadleeh/internal/argument"
 	"nadleeh/pkg/encrypt"
+	"nadleeh/pkg/env"
 	workflow "nadleeh/pkg/workflow/action"
 	"os"
 	"path"
 	"runtime"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -52,9 +55,12 @@ func setupLog() {
 	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
 }
 
-func createArgsMap(args []argparse.Arg) map[string]argparse.Arg {
+func createArgsMap(args []argparse.Arg, exclude []string) map[string]argparse.Arg {
 	argsMap := make(map[string]argparse.Arg, len(args))
 	for _, arg := range args {
+		if len(exclude) > 0 && slices.Contains(exclude, arg.GetLname()) {
+			continue
+		}
 		argsMap[arg.GetLname()] = arg
 	}
 	return argsMap
@@ -86,13 +92,32 @@ func main() {
 		}
 		switch cmd.GetName() {
 		case "run":
-			workflow.RunWorkflow(cmd, createArgsMap(cmd.GetArgs()))
+			args := createArgsEnv(cmd.GetArgs())
+			workflow.RunWorkflow(cmd, createArgsMap(cmd.GetArgs(), []string{"arg"}), args)
 		case "keypair":
-			encrypt.GenerateKeyPair(cmd, createArgsMap(cmd.GetArgs()))
+			encrypt.GenerateKeyPair(cmd, createArgsMap(cmd.GetArgs(), nil))
 		case "encrypt":
-			encrypt.Encrypt(cmd, createArgsMap(cmd.GetArgs()))
+			encrypt.Encrypt(cmd, createArgsMap(cmd.GetArgs(), nil))
 		default:
 			log.Fatalf("unknown command: %s", cmd.GetName())
 		}
 	}
+}
+
+func createArgsEnv(args []argparse.Arg) env.Env {
+	argMap := make(map[string]string)
+	for _, arg := range args {
+		if arg.GetLname() == "arg" && arg.GetParsed() {
+			argList := arg.GetResult().(*[]string)
+			for _, argLine := range *argList {
+				key, value, found := strings.Cut(argLine, "=")
+				if !found {
+					continue
+				}
+				argMap[strings.TrimSpace(key)] = strings.TrimSpace(value)
+			}
+		}
+	}
+	argEnv := env.NewReadEnv(nil, argMap)
+	return argEnv
 }

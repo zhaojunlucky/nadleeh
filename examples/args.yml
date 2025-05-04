@@ -1,0 +1,26 @@
+name: "test"
+checks:
+  private-key: false # whether to use private key
+  args:
+    - name: pr
+      pattern: "\\d+" # value match regex
+working-dir: /Users/jun/Downloads
+env-files:
+  - tg.env
+jobs:
+  os-info:
+    steps:
+      - name: js
+        script: |
+          console.log(arg.pr)
+      - name: bash
+        run: |
+          echo ${{ arg.pr }}
+      - name: telegram message
+        if: ${{ job.failure() }}
+        uses: telegram
+        with:
+          key: ${{ env.TG_BOT_KEY }}
+          channel: ${TG_CHANNEL}
+          message: "job failed "
+

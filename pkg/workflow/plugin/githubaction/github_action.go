@@ -19,15 +19,16 @@ const Download = "download-artifact"
 const GhActionDownloadArtifact = "GH_ACTION_DOWNLOAD_ARTIFACT"
 
 type GitHubAction struct {
-	ctx          *run_context.WorkflowRunContext
-	organization string
-	repository   string
-	branch       string
-	path         string
-	token        string
-	action       string
-	pr           int
-	config       map[string]string
+	ctx             *run_context.WorkflowRunContext
+	organization    string
+	repository      string
+	branch          string
+	path            string
+	token           string
+	action          string
+	pr              int
+	artifactPathEnv string
+	config          map[string]string
 }
 
 func (g *GitHubAction) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
@@ -36,8 +37,8 @@ func (g *GitHubAction) Init(ctx *run_context.WorkflowRunContext, config map[stri
 	return nil
 }
 
-func (g *GitHubAction) Run(parent env.Env) error {
-	err := g.initConfig(parent)
+func (g *GitHubAction) Run(parent env.Env, variables map[string]interface{}) error {
+	err := g.initConfig(parent, variables)
 	if err != nil {
 		return err
 	}
@@ -94,14 +95,24 @@ func (g *GitHubAction) Run(parent env.Env) error {
 		if err != nil {
 			return err
 		}
-		log.Infof("set downloaded artifact path as env %s=%s", GhActionDownloadArtifact, artifactPath)
-		parent.Set(GhActionDownloadArtifact, artifactPath)
+		artiEnv := GhActionDownloadArtifact
+		if len(g.artifactPathEnv) > 0 {
+			artiEnv = g.artifactPathEnv
+		}
+		log.Infof("set downloaded artifact path as env %s=%s", artiEnv, artifactPath)
+		parent.Set(artiEnv, artifactPath)
 		break
 	}
 	return nil
 }
 
-func (g *GitHubAction) initConfig(env env.Env) error {
+func (g *GitHubAction) initConfig(env env.Env, variables map[string]interface{}) error {
+	var err error
+	g.config, err = run_context.InterpretPluginCfg(g.ctx, env, g.config, variables)
+	if err != nil {
+		return err
+	}
+
 	g.repository = env.Expand(g.config["repository"])
 	if len(g.repository) <= 0 {
 		return fmt.Errorf("invalid repository")
@@ -116,6 +127,10 @@ func (g *GitHubAction) initConfig(env env.Env) error {
 
 	if util.HasKey(g.config, "branch") {
 		g.branch = env.Expand(g.config["branch"])
+	}
+
+	if util.HasKey(g.config, "artifact-path-env") {
+		g.artifactPathEnv = env.Expand(g.config["artifact-path-env"])
 	}
 
 	if util.HasKey(g.config, "pr") {

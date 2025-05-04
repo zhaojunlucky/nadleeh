@@ -118,7 +118,7 @@ func (js *NJSHttp) DownloadFile(method string, url string, downloadPath string, 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("bad status: %s", resp.Status)
 	}
-	log.Infof("download file to %s\n", downloadPath)
+	log.Infof("download file to %s", downloadPath)
 	// Writer the body to file
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {

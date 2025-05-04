@@ -63,8 +63,9 @@ func main() {
 	o, err := vm.RunString(`
 
  var a = 1
-
-a == 1
+console.log(data.id)
+a == data.id
+data.id = 22
 `)
 	fmt.Println("====")
 	z := o.Export()
