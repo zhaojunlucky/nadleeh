@@ -1,23 +1,25 @@
 package workflow
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v3"
 	"nadleeh/pkg/util"
+	"nadleeh/pkg/workflow/core"
+	"nadleeh/pkg/workflow/run_context"
 	"os"
-	"path/filepath"
-	"strings"
+	"regexp"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
 type Workflow struct {
 	Name       string
 	Version    string
 	Env        map[string]string
-	Jobs       []Job
+	Jobs       []*Job
 	WorkingDir string
+	Checks     WorkflowCheck
 }
 
 type WorkflowArg struct {
@@ -30,113 +32,123 @@ type WorkflowCheck struct {
 	Args       []WorkflowArg `yaml:"args"`
 	Envs       []WorkflowArg `yaml:"envs"`
 }
-type workflowDefinition struct {
-	Name       string
-	Checks     WorkflowCheck `yaml:"checks"`
-	Version    string
-	EnvFiles   []string `yaml:"env-files"`
-	Env        map[string]string
-	WorkingDir string `yaml:"working-dir"`
-	Jobs       yaml.Node
-}
 
-func parseEnv(env map[string]string, envFiles []string) (map[string]string, error) {
-	if env == nil {
-		env = make(map[string]string)
-	}
-	for _, envFile := range envFiles {
-		log.Infof("check env file: %s", envFile)
-		_, err := os.Stat(envFile)
-		if os.IsNotExist(err) {
-			if !strings.HasPrefix(envFile, "/") {
-				envFile = filepath.Join(os.Getenv("HOME"), ".nadleeh", envFile)
-				_, err = os.Stat(envFile)
-				if os.IsNotExist(err) {
-					log.Fatal(fmt.Sprintf("env file %s does not exist", envFile))
-				}
-			}
-		}
-		file, err := os.Open(envFile)
-		if err != nil {
-			return nil, err
-		}
-		defer file.Close()
-		scanner := bufio.NewScanner(file)
-		log.Infof("parsing env file: %s", envFile)
-		for scanner.Scan() {
-			line := strings.TrimSpace(scanner.Text())
-			if len(line) == 0 || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {
-				continue
-			}
-			kv := strings.SplitN(line, "=", 2)
-			if len(kv) != 2 {
-				return nil, fmt.Errorf("env file line %s is not valid", line)
-			}
-
-			key := strings.TrimSpace(kv[0])
-			value := strings.TrimSpace(kv[1])
-			if util.HasKey(env, key) {
-				log.Warnf("override env key %s from file %s", key, envFile)
-			}
-			env[key] = value
-		}
-
-	}
-
-	return env, nil
-}
-
-func ParseWorkflow(filePath string) (*Workflow, *WorkflowCheck, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer file.Close()
-	var rawWorkflow workflowDefinition
-	if err := yaml.NewDecoder(file).Decode(&rawWorkflow); err != nil {
-		return nil, nil, err
-	}
-	wfEnv, err := parseEnv(rawWorkflow.Env, rawWorkflow.EnvFiles)
-	if err != nil {
-		return nil, nil, err
-	}
-	workflow := &Workflow{
-		Name:       rawWorkflow.Name,
-		Version:    rawWorkflow.Version,
-		Env:        wfEnv,
-		WorkingDir: rawWorkflow.WorkingDir,
-		Jobs:       []Job{},
-	}
-
-	for i, node := range rawWorkflow.Jobs.Content {
-		if node.Tag != "!!str" {
-			continue // Node is a map, so it is read out at key.
-		}
-		var job Job
-		job.Name = node.Value
-
-		err := rawWorkflow.Jobs.Content[i+1].Decode(&job)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse job %s: %w", job.Name, err)
-		}
-
-		workflow.Jobs = append(workflow.Jobs, job)
-	}
-	err = workflow.validate()
-	if err != nil {
-		return nil, nil, err
-	}
-	return workflow, &rawWorkflow.Checks, nil
-}
-
-func (w *Workflow) validate() error {
+// Precheck validates the workflow definition
+func (w *Workflow) Precheck() error {
 	var workflowErrs []error
 
 	for _, job := range w.Jobs {
-		workflowErrs = append(workflowErrs, job.Validate())
+		workflowErrs = append(workflowErrs, job.Precheck())
 	}
 	if len(workflowErrs) > 0 {
 		return errors.Join(workflowErrs...)
 	}
 	return nil
+}
+
+// Compile compiles the workflow
+func (w *Workflow) Compile(ctx run_context.WorkflowRunContext) error {
+	var errs []error
+
+	for _, job := range w.Jobs {
+		errs = append(errs, job.Compile(ctx))
+	}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}
+
+// PreflightCheck validates the workflow arguments and environment variables
+func (w *Workflow) PreflightCheck(parent env.Env, args env.Env,
+	workflowRunCtx *run_context.WorkflowRunContext) error {
+	var errs []error
+	if w.Checks.PrivateKey && !workflowRunCtx.SecureCtx.HasPrivateKey() {
+		errs = append(errs, fmt.Errorf("no private key"))
+	}
+	argErrs := w.preflightCheck(args, w.Checks.Args)
+	errs = append(errs, argErrs...)
+	envErrs := w.preflightCheck(env.NewReadEnv(parent, w.Env), w.Checks.Envs)
+	errs = append(errs, envErrs...)
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}
+
+func (w *Workflow) preflightCheck(env env.Env, checks []WorkflowArg) []error {
+	envMap := env.GetAll()
+	var errs []error
+	for _, check := range checks {
+		if !util.HasKey(envMap, check.Name) {
+			errs = append(errs, fmt.Errorf("env %s is required", check.Name))
+			continue
+		}
+		if len(check.Pattern) > 0 {
+			matched, err := regexp.MatchString(check.Pattern, envMap[check.Name])
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			if !matched {
+				errs = append(errs, fmt.Errorf("env %s does not match pattern %s", check.Name, check.Pattern))
+			}
+
+		}
+
+	}
+	return errs
+}
+
+func (w *Workflow) CanRun() bool {
+	return true
+}
+
+func (w *Workflow) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
+
+	workflowStatus := core.NewRunnableStatus(w.Name, "workflow")
+	workflowStatus.Start()
+	ctx.WorkflowStatus = workflowStatus
+
+	workflowEnv, err := InterpretEnv(&runCtx.JSCtx, parent, w.Env, map[string]interface{}{"arg": ctx.Args})
+	if err != nil {
+		log.Errorf("Failed to interpret env %v", err)
+		workflowStatus.Finish(err)
+		return core.NewRunnable(err, 1, "")
+	}
+
+	w.changeWorkingDir(workflowEnv)
+
+	log.Infof("Run workflow: %s", w.Name)
+	for _, job := range w.Jobs {
+
+		ret := job.Do(workflowEnv, runCtx, ctx)
+		if ret.ReturnCode != 0 {
+			log.Errorf("Run workflow %s failed due to job %s failed", w.Name, job.Name)
+			workflowStatus.Finish(ret.Err)
+			return ret
+		}
+	}
+	workflowStatus.Finish(nil)
+	return core.NewRunnableResult(nil)
+}
+
+func (w *Workflow) changeWorkingDir(workflowEnv *env.ReadWriteEnv) {
+	if len(w.WorkingDir) > 0 {
+		log.Infof("change working dir to: %s", w.WorkingDir)
+		workflowEnv.Set("PWD", w.WorkingDir)
+		workflowEnv.Set("HOME", w.WorkingDir)
+		fi, err := os.Stat(w.WorkingDir)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if !fi.IsDir() {
+			log.Fatalf("working directory must be a directory: %s", w.WorkingDir)
+		}
+		err = os.Chdir(w.WorkingDir)
+		if err != nil {
+			// Handle the error if the directory change fails
+			log.Fatal(err)
+		}
+	}
 }

@@ -2,19 +2,40 @@ package telegram
 
 import (
 	"fmt"
+	"nadleeh/pkg/workflow/core"
+
 	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
+
 	"io"
-	"nadleeh/pkg/env"
 	"nadleeh/pkg/workflow/run_context"
 	"net/http"
 )
 
 type Telegram struct {
-	ctx      *run_context.WorkflowRunContext
-	config   map[string]string
-	tgBotKey string
-	channel  string
-	message  string
+	Version    string
+	PluginPath string
+	ctx        *run_context.WorkflowRunContext
+	config     map[string]string
+	tgBotKey   string
+	channel    string
+	message    string
+}
+
+func (t *Telegram) GetName() string {
+	return "telegram"
+}
+
+func (t *Telegram) CanRun() bool {
+	return true
+}
+
+func (t *Telegram) Compile(runCtx run_context.WorkflowRunContext) error {
+	return nil
+}
+
+func (t *Telegram) Resolve() error {
+	return nil
 }
 
 func (t *Telegram) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
@@ -23,17 +44,17 @@ func (t *Telegram) Init(ctx *run_context.WorkflowRunContext, config map[string]s
 	return nil
 }
 
-func (g *Telegram) Run(parent env.Env, variables map[string]interface{}) error {
+func (g *Telegram) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	log.Infof("Run telegram plugin")
-	err := g.validate(parent, variables)
+	err := g.validate(parent, ctx.GenerateMap())
 	if err != nil {
-		return err
+		return core.NewRunnableResult(err)
 	}
 	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s", g.tgBotKey, g.channel, g.message)
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("Error sending GET request: %v", err)
+		return core.NewRunnableResult(fmt.Errorf("Error sending GET request: %v", err))
 	}
 	// Ensure the response body is closed when the function exits
 	// This is crucial to prevent resource leaks
@@ -41,16 +62,16 @@ func (g *Telegram) Run(parent env.Env, variables map[string]interface{}) error {
 
 	// Check the HTTP status code
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Received non-OK HTTP status: %d", resp.StatusCode)
+		return core.NewRunnableResult(fmt.Errorf("Received non-OK HTTP status: %d", resp.StatusCode))
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("Error reading response body: %v", err)
+		return core.NewRunnableResult(fmt.Errorf("Error reading response body: %v", err))
 	}
 
 	// Print the response body as a string
 	log.Infof("Response Body:\n%s", body)
-	return nil
+	return core.NewRunnableResult(nil)
 }
 
 func (g *Telegram) validate(parent env.Env, variables map[string]interface{}) error {

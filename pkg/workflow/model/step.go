@@ -3,8 +3,13 @@ package workflow
 import (
 	"fmt"
 	"nadleeh/pkg/util"
+	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/plugin"
+	"nadleeh/pkg/workflow/run_context"
 	"slices"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
 type Step struct {
@@ -17,9 +22,13 @@ type Step struct {
 	Run             string
 	Uses            string
 	With            map[string]string
+	PluginPath      string
+
+	runner core.Runnable
 }
 
-func (step *Step) Validate() error {
+// Precheck validates the step definition
+func (step *Step) Precheck() error {
 	count := util.Bool2Int(len(step.Run) > 0) + util.Bool2Int(len(step.Script) > 0) + util.Bool2Int(len(step.Uses) > 0)
 	if count > 1 {
 		return fmt.Errorf("multiple script/run/uses specified in step %s", step.Name)
@@ -28,7 +37,26 @@ func (step *Step) Validate() error {
 	if step.RequirePlugin() && !slices.Contains(plugin.SupportedPlugins, step.Uses) {
 		return fmt.Errorf("unsupported plugin %s in step %s", step.Uses, step.Name)
 	}
+
+	if step.HasScript() {
+		step.runner = &JSRunner{Script: step.Script, Name: step.Name}
+	} else if step.HasRun() {
+		step.runner = &BashRunner{Script: step.Run, Name: step.Name}
+	} else if step.RequirePlugin() {
+		plug, err := plugin.NewPlugin(step.Uses, step.PluginPath)
+		if err != nil {
+			return err
+		}
+		step.runner = &PluginRunner{plug: plug, StepName: step.Name, Config: step.With}
+	} else {
+		return fmt.Errorf("no script/run/uses specified in step %s", step.Name)
+	}
 	return nil
+}
+
+// Compile compiles the workflow
+func (step *Step) Compile(ctx run_context.WorkflowRunContext) error {
+	return step.runner.Compile(ctx)
 }
 
 func (step *Step) HasScript() bool {
@@ -49,4 +77,83 @@ func (step *Step) HasIf() bool {
 
 func (step *Step) HasContinueOnError() bool {
 	return len(step.ContinueOnError) > 0
+}
+
+func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
+
+	stepStatus := core.NewRunnableStatus(step.Name, "step")
+	ctx.JobStatus.AddChild(stepStatus)
+
+	futureStatus := ctx.JobStatus.FutureStatus()
+
+	if futureStatus == core.Fail {
+		log.Warnf("previous steps failed, check if need to run current step: %s", step.Name)
+		if step.HasIf() {
+			val, err := step.evalIf(runCtx, parent, ctx)
+			if err != nil {
+				stepStatus.Finish(err)
+				return core.NewRunnable(err, -1, err.Error())
+			} else if !val {
+				stepStatus.Finish(nil)
+				log.Errorf("step %s if is false skip", step.Name)
+				return core.NewRunnableResult(nil)
+			}
+
+		} else {
+			log.Warnf("step %s no if conditon, skip", step.Name)
+
+			return core.NewRunnableResult(nil)
+		}
+	}
+
+	stepStatus.Start()
+
+	stepEnv, err := InterpretEnv(&runCtx.JSCtx, parent, step.Env, ctx.GenerateMap())
+	if err != nil {
+		log.Errorf("Failed to interpret job env %v", err)
+		stepStatus.Finish(err)
+		return core.NewRunnableResult(err)
+	}
+
+	result := step.runner.Do(stepEnv, runCtx, ctx)
+
+	if result.ReturnCode != 0 {
+		stepStatus.Finish(result.Err)
+		if step.HasContinueOnError() {
+			log.Infof("step %s failed, check continue on error", step.Name)
+			value, err := step.evalContinueOnError(runCtx, stepEnv, ctx)
+			if err != nil {
+				stepStatus.Finish(err)
+
+				return core.NewRunnable(err, -1, "")
+			}
+			stepStatus.ContinueOnErr = value
+		}
+
+	}
+	return result
+
+}
+
+func (step *Step) evalContinueOnError(runCtx *run_context.WorkflowRunContext, parent env.Env, ctx *core.RunnableContext) (bool, error) {
+
+	value, err := runCtx.JSCtx.EvalActionScriptBool(parent, step.ContinueOnError, ctx.GenerateMap())
+	if err != nil {
+		log.Errorf("Failed to eval continue-on-error for step %s, error: %v", step.Name, err)
+		return false, err
+	}
+	log.Infof("Continue on error is %v for step %s", value, step.Name)
+	return value, err
+}
+
+func (step *Step) evalIf(runCtx *run_context.WorkflowRunContext, parent env.Env, ctx *core.RunnableContext) (bool, error) {
+
+	value, err := runCtx.JSCtx.EvalActionScriptBool(parent, step.If, ctx.GenerateMap())
+	if err != nil {
+		log.Errorf("Failed to eval if for step %s, error: %v", step.Name, err)
+		return false, err
+	}
+
+	log.Infof("If is %v for step %s", value, step.Name)
+	return value, nil
 }

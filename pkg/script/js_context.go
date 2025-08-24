@@ -2,11 +2,14 @@ package script
 
 import (
 	"fmt"
+
+	"github.com/dop251/goja/parser"
 	"github.com/dop251/goja_nodejs/console"
 	"github.com/dop251/goja_nodejs/require"
 	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
+
 	"nadleeh/pkg/encrypt"
-	"nadleeh/pkg/env"
 	"nadleeh/pkg/util"
 	"nadleeh/pkg/util/js_token"
 	"reflect"
@@ -22,11 +25,141 @@ var (
 	}
 )
 
+type jsScriptProgram struct {
+	program *goja.Program
+	err     error
+}
+
 type JSContext struct {
-	JSSecCtx JSSecureContext
+	JSSecCtx      JSSecureContext
+	scriptProgram map[string]*jsScriptProgram
+	count         int
 }
 
 var unAllowedEnvKeys = []string{"secure", "env", "http", "core", "file"}
+
+func (js *JSContext) Compile(script string) error {
+	script = strings.TrimSpace(script)
+	sp := js.scriptProgram[script]
+	if sp != nil {
+		return sp.err
+	}
+	program, err := goja.Compile(fmt.Sprintf("script_%d", js.count), script, true)
+	js.count++
+	if err != nil {
+		js.scriptProgram[script] = &jsScriptProgram{
+			err: err,
+		}
+		return err
+	}
+	js.scriptProgram[script] = &jsScriptProgram{
+		program: program,
+	}
+
+	return nil
+
+}
+
+func (js *JSContext) getFileKey(jsFile string) (string, error) {
+	sha256, err := util.CalculateFileSHA256(jsFile)
+	if err != nil {
+		log.Errorf("failed to calc hash for file %s: %v", jsFile, err)
+		return "", err
+	}
+	return fmt.Sprintf("%s:%s", jsFile, sha256), nil
+}
+
+func (js *JSContext) CompileFile(jsFile string) (string, error) {
+	fileKey, err := js.getFileKey(jsFile)
+	if err != nil {
+		js.scriptProgram[fileKey] = &jsScriptProgram{
+			err: err,
+		}
+		return fileKey, err
+	}
+
+	sp := js.scriptProgram[fileKey]
+	if sp != nil {
+		if sp.err != nil {
+			return fileKey, sp.err
+		} else {
+			return fileKey, nil
+		}
+	}
+
+	prg, err := parser.ParseFile(nil, jsFile, nil, 0)
+	if err != nil {
+		log.Errorf("failed to parse javascript file %s: %v", jsFile, err)
+		js.scriptProgram[fileKey] = &jsScriptProgram{
+			err: err,
+		}
+		return fileKey, err
+	}
+
+	prog, err := goja.CompileAST(prg, true)
+
+	if err != nil {
+		log.Errorf("failed to compile javascript file %s: %v", jsFile, err)
+		js.scriptProgram[fileKey] = &jsScriptProgram{
+			err: err,
+		}
+		return fileKey, err
+	}
+
+	js.scriptProgram[fileKey] = &jsScriptProgram{
+		program: prog,
+	}
+
+	return fileKey, nil
+}
+
+func (js *JSContext) runWithProgram(vm *goja.Runtime, script string) (goja.Value, error) {
+	script = strings.TrimSpace(script)
+	sp := js.scriptProgram[script]
+	if sp != nil {
+		if sp.err != nil {
+			return nil, sp.err
+		} else {
+			return vm.RunProgram(sp.program)
+		}
+	}
+
+	return vm.RunString(script)
+}
+
+func (js *JSContext) RunFile(env env.Env, jsFile string, variables map[string]interface{}) (int, string, error) {
+	fileKey, err := js.CompileFile(jsFile)
+	if err != nil {
+		return 1, "", err
+	}
+
+	st := js.scriptProgram[fileKey]
+	if st == nil || st.err != nil {
+		return 2, "", fmt.Errorf("invalud file %s", jsFile)
+	}
+
+	vm := NewJSVm()
+	vm.Set("env", env)
+	vm.Set("secure", &js.JSSecCtx)
+
+	for k, v := range variables {
+		if slices.Contains(unAllowedEnvKeys, k) {
+			return 1, "", fmt.Errorf("key %s is not allowed", k)
+		}
+		vm.Set(k, v)
+	}
+
+	val, err := vm.RunProgram(st.program)
+	output := ""
+	if val != nil && val != goja.Undefined() && val != goja.Null() {
+		output = val.String()
+	}
+	if err != nil {
+		return 1, output, err
+	}
+	return 0, output, nil
+
+}
 
 func (js *JSContext) Run(env env.Env, script string, variables map[string]interface{}) (int, string, error) {
 	vm := NewJSVm()
@@ -39,9 +172,9 @@ func (js *JSContext) Run(env env.Env, script string, variables map[string]interf
 		}
 		vm.Set(k, v)
 	}
-	val, err := vm.RunString(script)
-	output := ""
 
+	val, err := js.runWithProgram(vm, script)
+	output := ""
 	if val != nil && val != goja.Undefined() && val != goja.Null() {
 		output = val.String()
 	}
@@ -63,7 +196,7 @@ func (js *JSContext) Eval(env env.Env, expression string, variables map[string]i
 		vm.Set(k, v)
 	}
 
-	return vm.RunString(expression)
+	return js.runWithProgram(vm, expression)
 }
 
 func (js *JSContext) EvalBool(env env.Env, expression string, variables map[string]interface{}) (bool, error) {

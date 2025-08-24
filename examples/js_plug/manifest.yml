@@ -1,0 +1,19 @@
+metadata:
+  workflow_version: ^1.0.0
+  version: 1.0.0
+  name: test
+  description: test
+  platforms:
+    - os: linux
+      arch: amd64
+      id: debian
+      version_id: ^13
+    - os: darwin
+      arch: arm64
+    - os: windows
+      arch: amd64
+runtime:
+  args:
+    - name: pr
+      pattern: "\\d+"
+      required: true

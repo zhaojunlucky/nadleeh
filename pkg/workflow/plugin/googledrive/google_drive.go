@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"nadleeh/pkg/workflow/core"
+	"nadleeh/pkg/workflow/run_context"
+	"net/http"
+	"os"
+
 	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	drive "google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
-	"nadleeh/pkg/env"
-	"nadleeh/pkg/workflow/run_context"
-	"net/http"
-	"os"
 )
 
 const (
@@ -20,12 +22,30 @@ const (
 )
 
 type GoogleDrive struct {
+	Version    string
+	PluginPath string
 	ctx        *run_context.WorkflowRunContext
 	name       string
 	path       string
 	remotePath string
 	config     map[string]string
 	cred       string
+}
+
+func (g *GoogleDrive) GetName() string {
+	return "google-drive"
+}
+
+func (g *GoogleDrive) CanRun() bool {
+	return true
+}
+
+func (g *GoogleDrive) Compile(runCtx run_context.WorkflowRunContext) error {
+	return nil
+}
+
+func (g *GoogleDrive) Resolve() error {
+	return nil
 }
 
 func (g *GoogleDrive) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
@@ -35,20 +55,20 @@ func (g *GoogleDrive) Init(ctx *run_context.WorkflowRunContext, config map[strin
 	return nil
 }
 
-func (g *GoogleDrive) Run(parent env.Env, variables map[string]interface{}) error {
+func (g *GoogleDrive) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	log.Infof("Run Google Drive plugin")
-	err := g.validate(parent, variables)
+	err := g.validate(parent, ctx.GenerateMap())
 	if err != nil {
-		return err
+		return core.NewRunnableResult(err)
 	}
 	client := g.ServiceAccount(g.cred)
 	srv, err := drive.NewService(context.Background(), option.WithHTTPClient(client), option.WithScopes(SCOPE))
 	if err != nil {
-		return err
+		return core.NewRunnableResult(err)
 	}
 	file, err := os.Open(g.path)
 	if err != nil {
-		return err
+		return core.NewRunnableResult(err)
 	}
 	defer file.Close()
 	f := &drive.File{Name: g.name, Parents: []string{g.remotePath}}
@@ -58,10 +78,10 @@ func (g *GoogleDrive) Run(parent env.Env, variables map[string]interface{}) erro
 		ProgressUpdater(func(now, size int64) { log.Infof("%d, %d\r", now, size) }).
 		Do()
 	if err != nil {
-		return err
+		return core.NewRunnableResult(err)
 	}
 	log.Infof("https://drive.google.com/file/d/%s/view?usp=drive_link", res.Id)
-	return nil
+	return core.NewRunnableResult(nil)
 }
 
 // ServiceAccount : Use Service account
