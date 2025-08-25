@@ -8,7 +8,6 @@ import (
 	"nadleeh/pkg/workflow/plugin/js_plug"
 	"nadleeh/pkg/workflow/plugin/minio"
 	"nadleeh/pkg/workflow/plugin/telegram"
-	"nadleeh/pkg/workflow/run_context"
 	"strings"
 )
 import "nadleeh/pkg/workflow/plugin/googledrive"
@@ -18,12 +17,11 @@ var SupportedPlugins = []string{"google-drive", "github-actions", "telegram", "m
 type Plugin interface {
 	core.Compilable
 	core.Runnable
-	Init(ctx *run_context.WorkflowRunContext, config map[string]string) error
 	Resolve() error
 	GetName() string
 }
 
-func NewPlugin(name string, pluginPath string) (Plugin, error) {
+func NewPlugin(name string, pluginPath string, config map[string]string) (Plugin, error) {
 	var version string
 	i := strings.Index(name, "@")
 	if i != -1 {
@@ -32,15 +30,15 @@ func NewPlugin(name string, pluginPath string) (Plugin, error) {
 	}
 	var plug Plugin
 	if name == "google-drive" {
-		plug = &googledrive.GoogleDrive{Version: version}
+		plug = &googledrive.GoogleDrive{Version: version, Config: config}
 	} else if name == "github-actions" {
-		plug = &githubaction.GitHubAction{Version: version}
+		plug = &githubaction.GitHubAction{Version: version, Config: config}
 	} else if name == "telegram" {
-		plug = &telegram.Telegram{Version: version}
+		plug = &telegram.Telegram{Version: version, Config: config}
 	} else if name == "minio" {
-		plug = &minio.Minio{Version: version}
+		plug = &minio.Minio{Version: version, Config: config}
 	} else if len(version) > 0 {
-		plug = &js_plug.JSPlug{Version: version, PluginPath: pluginPath, PluginName: name}
+		plug = &js_plug.JSPlug{Version: version, PluginPath: pluginPath, PluginName: name, Config: config}
 	}
 	if plug != nil {
 		return plug, plug.Resolve()

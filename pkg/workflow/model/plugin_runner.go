@@ -21,13 +21,13 @@ func (p *PluginRunner) Compile(runCtx run_context.WorkflowRunContext) error {
 
 // Do runs the bash script
 func (p *PluginRunner) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
-	err := p.plug.Init(runCtx, p.Config)
-	if err != nil {
-		return core.NewRunnableResult(err)
-	}
 	return p.plug.Do(parent, runCtx, ctx)
 }
 
 func (p *PluginRunner) CanRun() bool {
 	return !p.plug.CanRun()
+}
+
+func (p *PluginRunner) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
+	return p.plug.Init(runCtx, p.Config)
 }

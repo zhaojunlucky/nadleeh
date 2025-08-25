@@ -24,11 +24,10 @@ const (
 type GoogleDrive struct {
 	Version    string
 	PluginPath string
-	ctx        *run_context.WorkflowRunContext
 	name       string
 	path       string
 	remotePath string
-	config     map[string]string
+	Config     map[string]string
 	cred       string
 }
 
@@ -48,20 +47,18 @@ func (g *GoogleDrive) Resolve() error {
 	return nil
 }
 
-func (g *GoogleDrive) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
-	g.ctx = ctx
-	g.config = config
+func (g *GoogleDrive) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
 
 	return nil
 }
 
 func (g *GoogleDrive) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	log.Infof("Run Google Drive plugin")
-	err := g.validate(parent, ctx.GenerateMap())
+	err := g.validate(runCtx, parent, ctx.GenerateMap())
 	if err != nil {
 		return core.NewRunnableResult(err)
 	}
-	client := g.ServiceAccount(g.cred)
+	client := g.ServiceAccount(runCtx, g.cred)
 	srv, err := drive.NewService(context.Background(), option.WithHTTPClient(client), option.WithScopes(SCOPE))
 	if err != nil {
 		return core.NewRunnableResult(err)
@@ -85,14 +82,14 @@ func (g *GoogleDrive) Do(parent env.Env, runCtx *run_context.WorkflowRunContext,
 }
 
 // ServiceAccount : Use Service account
-func (g *GoogleDrive) ServiceAccount(credentialFile string) *http.Client {
+func (g *GoogleDrive) ServiceAccount(runCtx *run_context.WorkflowRunContext, credentialFile string) *http.Client {
 	b, err := os.ReadFile(credentialFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 	s := string(b)
-	if g.ctx.SecureCtx.IsEncrypted(s) {
-		b, err = g.ctx.SecureCtx.Decrypt(s)
+	if runCtx.SecureCtx.IsEncrypted(s) {
+		b, err = runCtx.SecureCtx.Decrypt(s)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -114,18 +111,18 @@ func (g *GoogleDrive) ServiceAccount(credentialFile string) *http.Client {
 	return client
 }
 
-func (g *GoogleDrive) validate(parent env.Env, variables map[string]interface{}) error {
+func (g *GoogleDrive) validate(runCtx *run_context.WorkflowRunContext, parent env.Env, variables map[string]interface{}) error {
 	var err error
-	g.config, err = run_context.InterpretPluginCfg(g.ctx, parent, g.config, variables)
+	g.Config, err = run_context.InterpretPluginCfg(runCtx, parent, g.Config, variables)
 	if err != nil {
 		return err
 	}
 
-	g.name = parent.Expand(g.config["name"])
+	g.name = parent.Expand(g.Config["name"])
 	if len(g.name) <= 0 {
 		return fmt.Errorf("invalid name")
 	}
-	g.path = parent.Expand(g.config["path"])
+	g.path = parent.Expand(g.Config["path"])
 	if len(g.path) <= 0 {
 		return fmt.Errorf("invalid path")
 	}
@@ -137,9 +134,9 @@ func (g *GoogleDrive) validate(parent env.Env, variables map[string]interface{})
 	if fi.IsDir() {
 		return fmt.Errorf("invalid path, it's not a file")
 	}
-	g.remotePath = parent.Expand(g.config["remote-path"])
+	g.remotePath = parent.Expand(g.Config["remote-path"])
 
-	g.cred = parent.Expand(g.config["cred"])
+	g.cred = parent.Expand(g.Config["cred"])
 	if len(g.cred) <= 0 {
 		return fmt.Errorf("invalid cred")
 	}

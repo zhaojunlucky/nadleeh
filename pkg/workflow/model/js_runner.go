@@ -35,3 +35,7 @@ func (r *JSRunner) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ct
 func (r *JSRunner) CanRun() bool {
 	return r.hasError > 1
 }
+
+func (r *JSRunner) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
+	return nil
+}

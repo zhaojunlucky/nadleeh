@@ -1,10 +1,12 @@
 package js_plug
 
 import (
-	"nadleeh/pkg/workflow/plugin"
+	"fmt"
+	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/run_context"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
 type metadata struct {
@@ -37,21 +39,37 @@ type JSPlug struct {
 	Version    string
 	PluginPath string
 	PluginName string
-	ctx        *run_context.WorkflowRunContext
 	manifest   *manifest
-	config     map[string]string
-	pm         *plugin.PluginMetadata
+	Config     map[string]string
+	pm         *PluginMetadata
 }
 
-func (j *JSPlug) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
-	j.ctx = ctx
-	j.config = config
+func (j *JSPlug) Compile(runCtx run_context.WorkflowRunContext) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (j *JSPlug) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (j *JSPlug) CanRun() bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (j *JSPlug) GetName() string {
+	return fmt.Sprintf("%s-%s", j.PluginName, j.Version)
+}
+
+func (j *JSPlug) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
 	return nil
 }
 
 func (j *JSPlug) Resolve() error {
 	var err error
-	j.pm, err = plugin.PM.LoadPlugin(j.PluginName, j.Version, "", j.PluginPath)
+	j.pm, err = PM.LoadPlugin(j.PluginName, j.Version, "", j.PluginPath)
 	if err != nil {
 		log.Errorf("failed to load plugin: %v", err)
 		return err

@@ -29,6 +29,23 @@ func (job *Job) Precheck() error {
 	return nil
 }
 
+func (job *Job) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
+	var errs []error
+
+	for _, step := range job.Steps {
+		err := step.PreflightCheck(parent, args, runCtx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	} else {
+		return nil
+	}
+}
+
 // Compile compiles the workflow
 func (job *Job) Compile(ctx run_context.WorkflowRunContext) error {
 	var errs []error

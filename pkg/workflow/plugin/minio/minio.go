@@ -17,8 +17,7 @@ import (
 type Minio struct {
 	Version    string
 	PluginPath string
-	ctx        *run_context.WorkflowRunContext
-	config     map[string]string
+	Config     map[string]string
 	URL        string
 	AccessKey  string
 	SecretKey  string
@@ -43,15 +42,13 @@ func (m *Minio) Resolve() error {
 	return nil
 }
 
-func (m *Minio) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
-	m.ctx = ctx
-	m.config = config
+func (m *Minio) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
 	return nil
 }
 
 func (m *Minio) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	log.Infof("Run minio plugin")
-	err := m.validate(parent, ctx.GenerateMap())
+	err := m.validate(runCtx, parent, ctx.GenerateMap())
 	if err != nil {
 		return core.NewRunnableResult(err)
 	}
@@ -87,32 +84,32 @@ func (m *Minio) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *
 
 }
 
-func (m *Minio) validate(parent env.Env, variables map[string]interface{}) error {
+func (m *Minio) validate(runCtx *run_context.WorkflowRunContext, parent env.Env, variables map[string]interface{}) error {
 	var err error
-	m.config, err = run_context.InterpretPluginCfg(m.ctx, parent, m.config, variables)
+	m.Config, err = run_context.InterpretPluginCfg(runCtx, parent, m.Config, variables)
 	if err != nil {
 		return err
 	}
 
-	m.URL = parent.Expand(m.config["url"])
+	m.URL = parent.Expand(m.Config["url"])
 	if len(m.URL) <= 0 {
 		return fmt.Errorf("invalid url")
 	}
-	m.AccessKey = parent.Expand(m.config["access-key"])
+	m.AccessKey = parent.Expand(m.Config["access-key"])
 	if len(m.AccessKey) <= 0 {
 		return fmt.Errorf("invalid access-key")
 	}
-	m.SecretKey = parent.Expand(m.config["secret-key"])
+	m.SecretKey = parent.Expand(m.Config["secret-key"])
 	if len(m.SecretKey) <= 0 {
 		return fmt.Errorf("invalid secret-key")
 	}
-	m.Bucket = parent.Expand(m.config["bucket"])
+	m.Bucket = parent.Expand(m.Config["bucket"])
 	if len(m.Bucket) <= 0 {
 		return fmt.Errorf("invalid bucket")
 	}
-	m.Path = parent.Expand(m.config["path"])
+	m.Path = parent.Expand(m.Config["path"])
 
-	m.Name = parent.Expand(m.config["name"])
+	m.Name = parent.Expand(m.Config["name"])
 
 	return nil
 }

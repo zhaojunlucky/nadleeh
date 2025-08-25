@@ -32,6 +32,7 @@ type Runnable interface {
 	Compilable
 	Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *RunnableContext) *RunnableResult
 	CanRun() bool
+	PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error
 }
 
 func NewRunnableResult(err error) *RunnableResult {

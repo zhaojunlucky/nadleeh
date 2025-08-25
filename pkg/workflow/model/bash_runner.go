@@ -44,3 +44,7 @@ func (r *BashRunner) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, 
 func (r *BashRunner) CanRun() bool {
 	return r.hasError > 1
 }
+
+func (r *BashRunner) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
+	return nil
+}

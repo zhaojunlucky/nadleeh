@@ -70,6 +70,14 @@ func (w *Workflow) PreflightCheck(parent env.Env, args env.Env,
 	errs = append(errs, argErrs...)
 	envErrs := w.preflightCheck(env.NewReadEnv(parent, w.Env), w.Checks.Envs)
 	errs = append(errs, envErrs...)
+
+	for _, job := range w.Jobs {
+		err := job.PreflightCheck(parent, args, workflowRunCtx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}

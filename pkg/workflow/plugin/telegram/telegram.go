@@ -15,8 +15,7 @@ import (
 type Telegram struct {
 	Version    string
 	PluginPath string
-	ctx        *run_context.WorkflowRunContext
-	config     map[string]string
+	Config     map[string]string
 	tgBotKey   string
 	channel    string
 	message    string
@@ -38,15 +37,14 @@ func (t *Telegram) Resolve() error {
 	return nil
 }
 
-func (t *Telegram) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
-	t.ctx = ctx
-	t.config = config
+func (t *Telegram) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
+
 	return nil
 }
 
 func (g *Telegram) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	log.Infof("Run telegram plugin")
-	err := g.validate(parent, ctx.GenerateMap())
+	err := g.validate(runCtx, parent, ctx.GenerateMap())
 	if err != nil {
 		return core.NewRunnableResult(err)
 	}
@@ -74,21 +72,21 @@ func (g *Telegram) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ct
 	return core.NewRunnableResult(nil)
 }
 
-func (g *Telegram) validate(parent env.Env, variables map[string]interface{}) error {
+func (g *Telegram) validate(runCtx *run_context.WorkflowRunContext, parent env.Env, variables map[string]interface{}) error {
 	var err error
-	g.config, err = run_context.InterpretPluginCfg(g.ctx, parent, g.config, variables)
+	g.Config, err = run_context.InterpretPluginCfg(runCtx, parent, g.Config, variables)
 	if err != nil {
 		return err
 	}
-	g.tgBotKey = parent.Expand(g.config["key"])
+	g.tgBotKey = parent.Expand(g.Config["key"])
 	if len(g.tgBotKey) <= 0 {
 		return fmt.Errorf("invalid tg-bot-key")
 	}
-	g.channel = parent.Expand(g.config["channel"])
+	g.channel = parent.Expand(g.Config["channel"])
 	if len(g.channel) <= 0 {
 		return fmt.Errorf("invalid channel")
 	}
-	g.message = parent.Expand(g.config["message"])
+	g.message = parent.Expand(g.Config["message"])
 	if len(g.message) <= 0 {
 		return fmt.Errorf("invalid message")
 	}

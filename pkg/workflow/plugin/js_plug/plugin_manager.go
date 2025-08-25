@@ -1,4 +1,4 @@
-package plugin
+package js_plug
 
 import (
 	"fmt"

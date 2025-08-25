@@ -157,3 +157,7 @@ func (step *Step) evalIf(runCtx *run_context.WorkflowRunContext, parent env.Env,
 	log.Infof("If is %v for step %s", value, step.Name)
 	return value, nil
 }
+
+func (step *Step) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
+	return step.runner.PreflightCheck(parent, args, runCtx)
+}
