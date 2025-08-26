@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/run_context"
+	"os"
 
+	"github.com/dlclark/regexp2"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
+	"gopkg.in/yaml.v3"
 )
 
 type metadata struct {
@@ -39,24 +42,32 @@ type JSPlug struct {
 	Version    string
 	PluginPath string
 	PluginName string
-	manifest   *manifest
+	manifest   manifest
 	Config     map[string]string
 	pm         *PluginMetadata
+	hasError   int
 }
 
 func (j *JSPlug) Compile(runCtx run_context.WorkflowRunContext) error {
-	//TODO implement me
-	panic("implement me")
+	_, err := runCtx.JSCtx.CompileFile(j.pm.MainFile)
+	return err
 }
 
 func (j *JSPlug) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	argMaps := ctx.GenerateMap()
+	j.Config, err = run_context.InterpretPluginCfg(runCtx, parent, j.Config, argMaps)
+	if err != nil {
+		return core.NewRunnableResult(err)
+	}
+
+	plugEnv := env.NewReadEnv(parent, j.Config)
+	ret, output, err := runCtx.JSCtx.RunFile(plugEnv, j.pm.MainFile, argMaps)
+	return core.NewRunnable(err, ret, output)
 }
 
 func (j *JSPlug) CanRun() bool {
-	//TODO implement me
-	panic("implement me")
+	return j.hasError > 1
 }
 
 func (j *JSPlug) GetName() string {
@@ -64,6 +75,37 @@ func (j *JSPlug) GetName() string {
 }
 
 func (j *JSPlug) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
+	file, err := os.Open(j.pm.ManifestFile)
+	if err != nil {
+		log.Errorf("failed to read manifest file %s", j.pm.ManifestFile)
+	}
+	err = yaml.NewDecoder(file).Decode(&j.manifest)
+	if err != nil {
+		log.Errorf("failed to parse manifest file %s", j.pm.ManifestFile)
+	}
+	plugArgs := j.manifest.runtime.args
+
+	for _, pa := range plugArgs {
+		if !args.Contains(pa.name) {
+			if pa.required {
+				return fmt.Errorf("required argument '%s' is not provided", pa.name)
+			}
+		} else if len(pa.pattern) > 0 {
+			reg, err := regexp2.Compile(pa.pattern, regexp2.IgnoreCase)
+			if err != nil {
+				return err
+			}
+			v, err := reg.MatchString(args.Get(pa.name))
+			if err != nil {
+				return err
+			}
+			if !v {
+				return fmt.Errorf("argument '%s' value doesn't match pattern '%s'", pa.name, pa.pattern)
+			}
+		}
+
+	}
+
 	return nil
 }
 

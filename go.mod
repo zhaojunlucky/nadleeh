@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/sirupsen/logrus v1.9.3
-	github.com/zhaojunlucky/golib v0.0.0-20250823120053-781ab9bc7c16
+	github.com/zhaojunlucky/golib v0.0.0-20250826115533-53ab4b166518
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.248.0
 	gopkg.in/yaml.v3 v3.0.1

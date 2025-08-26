@@ -191,6 +191,8 @@ github.com/zhaojunlucky/golib v0.0.0-20250823113555-cb6878483ddb h1:oHiKLAvlf1rf
 github.com/zhaojunlucky/golib v0.0.0-20250823113555-cb6878483ddb/go.mod h1:KXebaxHyIp4SorbsqtEAoSzJWVDws0tCXYcH129Wy7k=
 github.com/zhaojunlucky/golib v0.0.0-20250823120053-781ab9bc7c16 h1:0aqMX+cW8pLEjiEQPH8JVAMa+ktscp8gmLhhAF55Ihs=
 github.com/zhaojunlucky/golib v0.0.0-20250823120053-781ab9bc7c16/go.mod h1:KXebaxHyIp4SorbsqtEAoSzJWVDws0tCXYcH129Wy7k=
+github.com/zhaojunlucky/golib v0.0.0-20250826115533-53ab4b166518 h1:luGgS+t2juXJqiK2G6QYJ6mQXPi09z77RYrt6iFSr9g=
+github.com/zhaojunlucky/golib v0.0.0-20250826115533-53ab4b166518/go.mod h1:KXebaxHyIp4SorbsqtEAoSzJWVDws0tCXYcH129Wy7k=
 go.opencensus.io v0.24.0 h1:y73uSU6J157QMP2kn2r30vwW1A2W2WFwSCGnAVxeaD0=
 go.opencensus.io v0.24.0/go.mod h1:vNK8G9p7aAivkbmorf4v+7Hgx+Zs0yY+0fOtgBfjQKo=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
