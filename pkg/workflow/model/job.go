@@ -20,7 +20,10 @@ func (job *Job) Precheck() error {
 	var jobErrors []error
 
 	for _, step := range job.Steps {
-		jobErrors = append(jobErrors, step.Precheck())
+		err := step.Precheck()
+		if err != nil {
+			jobErrors = append(jobErrors, err)
+		}
 	}
 
 	if len(jobErrors) > 0 {
@@ -86,7 +89,7 @@ func (job *Job) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *
 		}
 	}
 	if len(errResults) == 0 {
-		jobStatus.Finish(nil)
+		jobStatus.Finish([]error{}...)
 		return core.NewRunnableResult(nil)
 	} else {
 		jobStatus.Finish(errResults...)

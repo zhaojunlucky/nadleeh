@@ -140,13 +140,29 @@ func NewPluginMetadata(name, version, token, localPath string) (*PluginMetadata,
 		pm.lockFile = filepath.Join(LocalLockPath, fmt.Sprintf("%s-%s.lock", name, version))
 	}
 	pm.MainFile = filepath.Join(pm.LocalPath, Main)
+
+	exist, err := file.FileExists(pm.MainFile)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, fmt.Errorf("plugin main.js %s doesn't exist", pm.MainFile)
+	}
 	pm.ManifestFile = filepath.Join(pm.LocalPath, Manifest)
+
+	exist, err = file.FileExists(pm.ManifestFile)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, fmt.Errorf("plugin manifest.yml %s doesn't exist", pm.ManifestFile)
+	}
 
 	return pm, nil
 }
 
 func formatPluginKey(name, version string) string {
-	return fmt.Sprintf("plugin-%s-%s", name, version)
+	return fmt.Sprintf("plugin:%s@%s", name, version)
 }
 
 type PluginManager struct {

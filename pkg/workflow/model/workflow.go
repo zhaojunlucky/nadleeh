@@ -38,7 +38,10 @@ func (w *Workflow) Precheck() error {
 	var workflowErrs []error
 
 	for _, job := range w.Jobs {
-		workflowErrs = append(workflowErrs, job.Precheck())
+		err := job.Precheck()
+		if err != nil {
+			workflowErrs = append(workflowErrs, err)
+		}
 	}
 	if len(workflowErrs) > 0 {
 		return errors.Join(workflowErrs...)
@@ -137,7 +140,7 @@ func (w *Workflow) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ct
 			return ret
 		}
 	}
-	workflowStatus.Finish(nil)
+	workflowStatus.Finish([]error{}...)
 	return core.NewRunnableResult(nil)
 }
 

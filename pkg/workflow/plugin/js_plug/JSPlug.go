@@ -50,6 +50,11 @@ type JSPlug struct {
 
 func (j *JSPlug) Compile(runCtx run_context.WorkflowRunContext) error {
 	_, err := runCtx.JSCtx.CompileFile(j.pm.MainFile)
+	if err != nil {
+		j.hasError = 1
+	} else {
+		j.hasError = 2
+	}
 	return err
 }
 

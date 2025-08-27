@@ -6,7 +6,6 @@ import (
 	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/plugin"
 	"nadleeh/pkg/workflow/run_context"
-	"slices"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
@@ -22,7 +21,7 @@ type Step struct {
 	Run             string
 	Uses            string
 	With            map[string]string
-	PluginPath      string
+	PluginPath      string `yaml:"plugin-path"`
 
 	runner core.Runnable
 }
@@ -34,16 +33,16 @@ func (step *Step) Precheck() error {
 		return fmt.Errorf("multiple script/run/uses specified in step %s", step.Name)
 	}
 
-	if step.RequirePlugin() && !slices.Contains(plugin.SupportedPlugins, step.Uses) {
-		return fmt.Errorf("unsupported plugin %s in step %s", step.Uses, step.Name)
-	}
+	//if step.RequirePlugin() && !slices.Contains(plugin.SupportedPlugins, step.Uses) {
+	//	return fmt.Errorf("unsupported plugin %s in step %s", step.Uses, step.Name)
+	//}
 
 	if step.HasScript() {
 		step.runner = &JSRunner{Script: step.Script, Name: step.Name}
 	} else if step.HasRun() {
 		step.runner = &BashRunner{Script: step.Run, Name: step.Name}
 	} else if step.RequirePlugin() {
-		plug, err := plugin.NewPlugin(step.Uses, step.PluginPath)
+		plug, err := plugin.NewPlugin(step.Uses, step.PluginPath, step.With)
 		if err != nil {
 			return err
 		}
@@ -94,7 +93,7 @@ func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx
 				stepStatus.Finish(err)
 				return core.NewRunnable(err, -1, err.Error())
 			} else if !val {
-				stepStatus.Finish(nil)
+				stepStatus.Finish([]error{}...)
 				log.Errorf("step %s if is false skip", step.Name)
 				return core.NewRunnableResult(nil)
 			}

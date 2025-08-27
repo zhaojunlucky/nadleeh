@@ -311,7 +311,8 @@ func NewJSVm() *goja.Runtime {
 
 func NewJSContext(secCtx *encrypt.SecureContext) JSContext {
 	return JSContext{
-		JSSecCtx: JSSecureContext{secureCtx: secCtx},
+		JSSecCtx:      JSSecureContext{secureCtx: secCtx},
+		scriptProgram: make(map[string]*jsScriptProgram),
 	}
 }
 

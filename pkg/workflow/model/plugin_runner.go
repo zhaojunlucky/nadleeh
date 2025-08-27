@@ -29,5 +29,5 @@ func (p *PluginRunner) CanRun() bool {
 }
 
 func (p *PluginRunner) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
-	return p.plug.Init(runCtx, p.Config)
+	return p.plug.PreflightCheck(parent, args, runCtx)
 }
