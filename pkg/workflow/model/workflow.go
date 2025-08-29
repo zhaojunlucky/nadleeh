@@ -67,7 +67,8 @@ func (w *Workflow) PreflightCheck(parent env.Env, args env.Env,
 	workflowRunCtx *run_context.WorkflowRunContext) error {
 	var errs []error
 	if w.Checks.PrivateKey && !workflowRunCtx.SecureCtx.HasPrivateKey() {
-		errs = append(errs, fmt.Errorf("no private key"))
+		errs = append(errs, fmt.Errorf("no private key specified"))
+		log.Errorf("no private key specified which required by the workflow")
 	}
 	argErrs := w.preflightCheck(args, w.Checks.Args)
 	errs = append(errs, argErrs...)
@@ -92,7 +93,7 @@ func (w *Workflow) preflightCheck(env env.Env, checks []WorkflowArg) []error {
 	var errs []error
 	for _, check := range checks {
 		if !util.HasKey(envMap, check.Name) {
-			errs = append(errs, fmt.Errorf("env %s is required", check.Name))
+			errs = append(errs, fmt.Errorf("env %s is required by the workflow", check.Name))
 			continue
 		}
 		if len(check.Pattern) > 0 {

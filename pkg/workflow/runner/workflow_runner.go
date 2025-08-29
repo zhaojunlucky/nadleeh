@@ -22,7 +22,7 @@ var (
 type WorkflowRunner struct {
 }
 
-func RunWorkflow(action string, args map[string]argparse.Arg, argEnv env.Env) {
+func RunWorkflow(args map[string]argparse.Arg, argEnv env.Env) {
 	yml, err := argument.GetStringFromArg(args["file"], true)
 	if err != nil {
 		log.Fatalf("failed to get yaml file arg %v", err)
@@ -58,7 +58,9 @@ func RunWorkflow(action string, args map[string]argparse.Arg, argEnv env.Env) {
 		log.Fatalf("failed to PreflightCheck workflow: %v", err)
 	}
 
-	if action == "run" {
+	checkArg := args["check"]
+
+	if !*checkArg.GetResult().(*bool) {
 		log.Infof("start run workflow")
 		result := wf.Do(env.OSEnv, runCtx, &core.RunnableContext{
 			NeedOutput: false,
@@ -69,5 +71,7 @@ func RunWorkflow(action string, args map[string]argparse.Arg, argEnv env.Env) {
 		} else {
 			log.Info("run workflow passed")
 		}
+	} else {
+		log.Infof("workflow check completed")
 	}
 }

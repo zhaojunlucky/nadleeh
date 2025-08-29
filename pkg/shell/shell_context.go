@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"nadleeh/pkg/common"
 	"strings"
 
 	"github.com/google/uuid"
@@ -72,9 +73,14 @@ func (sh *ShellContext) Run(env env.Env, shell string, needOutput bool) (int, st
 	defer os.Remove(tmpShFile)
 	cmd := exec.Command("/bin/bash", "-e", tmpShFile)
 
+	for key, value := range common.Sys.GetInfo().GetAll() {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
+	}
+	
 	for key, value := range env.GetAll() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
+
 	var output string
 	if needOutput {
 		aow := NewStdOutputWriter()

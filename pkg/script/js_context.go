@@ -2,6 +2,7 @@ package script
 
 import (
 	"fmt"
+	"nadleeh/pkg/common"
 
 	"github.com/dop251/goja/parser"
 	"github.com/dop251/goja_nodejs/console"
@@ -302,6 +303,7 @@ func NewJSVm() *goja.Runtime {
 	registry.RegisterNativeModule(console.ModuleName, console.RequireWithPrinter(printer))
 	console.Enable(vm)
 
+	vm.GlobalObject().Set("sys", common.Sys.GetInfo().GetAll())
 	vm.GlobalObject().Set("file", &NJSFile{})
 	vm.GlobalObject().Set("http", &NJSHttp{})
 	vm.GlobalObject().Set("core", &NJSCore{})

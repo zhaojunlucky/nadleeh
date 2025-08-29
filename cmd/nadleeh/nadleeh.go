@@ -96,7 +96,7 @@ func main() {
 		switch cmd.GetName() {
 		case "run":
 			args := createArgsEnv(cmd.GetArgs())
-			runner.RunWorkflow(cmd.GetName(), createArgsMap(cmd.GetArgs(), []string{"arg"}), args)
+			runner.RunWorkflow(createArgsMap(cmd.GetArgs(), []string{"arg"}), args)
 		case "keypair":
 			encrypt.GenerateKeyPair(cmd, createArgsMap(cmd.GetArgs(), nil))
 		case "encrypt":
