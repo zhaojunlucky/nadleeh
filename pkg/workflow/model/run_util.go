@@ -1,12 +1,13 @@
 package workflow
 
 import (
-	"nadleeh/pkg/env"
 	"nadleeh/pkg/script"
+
+	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
-func InterpretEnv(jsContext *script.JSContext, parent env.Env, envs map[string]string, variables map[string]interface{}) (*env.NadEnv, error) {
-	nadEnv := env.NewEnv(parent, nil)
+func InterpretEnv(jsContext *script.JSContext, parent env.Env, envs map[string]string, variables map[string]interface{}) (*env.ReadWriteEnv, error) {
+	nadEnv := env.NewReadWriteEnv(parent, nil)
 	if len(envs) == 0 {
 		return nadEnv, nil
 	}
@@ -21,7 +22,7 @@ func InterpretEnv(jsContext *script.JSContext, parent env.Env, envs map[string]s
 	return nadEnv, nil
 }
 
-func InterpretEnvSelf(jsContext *script.JSContext, parent *env.NadEnv, envs map[string]string, variables map[string]interface{}) error {
+func InterpretEnvSelf(jsContext *script.JSContext, parent *env.ReadWriteEnv, envs map[string]string, variables map[string]interface{}) error {
 	if len(envs) == 0 {
 		return nil
 	}

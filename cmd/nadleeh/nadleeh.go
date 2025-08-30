@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
+	"nadleeh/pkg/workflow/runner"
+
 	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
+
 	"io"
 	"nadleeh/internal/argument"
 	"nadleeh/pkg/encrypt"
-	"nadleeh/pkg/env"
-	workflow "nadleeh/pkg/workflow/action"
+
 	"os"
 	"path"
 	"runtime"
@@ -53,6 +56,7 @@ func setupLog() {
 		},
 	})
 	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
+	log.SetLevel(log.InfoLevel)
 }
 
 func createArgsMap(args []argparse.Arg, exclude []string) map[string]argparse.Arg {
@@ -82,6 +86,11 @@ func main() {
 		if arg.GetLname() == "help" && arg.GetParsed() {
 			fmt.Println(parser.Usage(nil))
 			return
+		} else if arg.GetLname() == "verbose" && arg.GetParsed() {
+			val := arg.GetResult().(*bool)
+			if *val {
+				log.SetLevel(log.DebugLevel)
+			}
 		}
 	}
 
@@ -93,7 +102,7 @@ func main() {
 		switch cmd.GetName() {
 		case "run":
 			args := createArgsEnv(cmd.GetArgs())
-			workflow.RunWorkflow(cmd, createArgsMap(cmd.GetArgs(), []string{"arg"}), args)
+			runner.RunWorkflow(createArgsMap(cmd.GetArgs(), []string{"arg"}), args)
 		case "keypair":
 			encrypt.GenerateKeyPair(cmd, createArgsMap(cmd.GetArgs(), nil))
 		case "encrypt":
@@ -118,6 +127,6 @@ func createArgsEnv(args []argparse.Arg) env.Env {
 			}
 		}
 	}
-	argEnv := env.NewReadEnv(nil, argMap)
+	argEnv := env.NewReadEnv(env.NewEmptyReadEnv(), argMap)
 	return argEnv
 }

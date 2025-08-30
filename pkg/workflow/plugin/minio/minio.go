@@ -3,37 +3,54 @@ package minio
 import (
 	"context"
 	"fmt"
-	"github.com/minio/minio-go/v7"                 // The MinIO Go client SDK
-	"github.com/minio/minio-go/v7/pkg/credentials" // For providing credentials
-	log "github.com/sirupsen/logrus"
-	"nadleeh/pkg/env"
+	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/run_context"
 	"os"
 	"path/filepath"
+
+	"github.com/minio/minio-go/v7"                 // The MinIO Go client SDK
+	"github.com/minio/minio-go/v7/pkg/credentials" // For providing credentials
+	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
 type Minio struct {
-	ctx       *run_context.WorkflowRunContext
-	config    map[string]string
-	URL       string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	Path      string
-	Name      string
+	Version    string
+	PluginPath string
+	Config     map[string]string
+	URL        string
+	AccessKey  string
+	SecretKey  string
+	Bucket     string
+	Path       string
+	Name       string
 }
 
-func (m *Minio) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
-	m.ctx = ctx
-	m.config = config
+func (m *Minio) GetName() string {
+	return "minio"
+}
+
+func (m *Minio) CanRun() bool {
+	return true
+}
+
+func (m *Minio) Compile(runCtx run_context.WorkflowRunContext) error {
 	return nil
 }
 
-func (m *Minio) Run(parent env.Env, variables map[string]interface{}) error {
+func (m *Minio) Resolve() error {
+	return nil
+}
+
+func (m *Minio) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
+	return nil
+}
+
+func (m *Minio) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	log.Infof("Run minio plugin")
-	err := m.validate(parent, variables)
+	err := m.validate(runCtx, parent, ctx.GenerateMap())
 	if err != nil {
-		return err
+		return core.NewRunnableResult(err)
 	}
 
 	minioClient, err := minio.New(m.URL, &minio.Options{
@@ -41,7 +58,7 @@ func (m *Minio) Run(parent env.Env, variables map[string]interface{}) error {
 		Secure: true,
 	})
 	if err != nil {
-		return fmt.Errorf("error initializing MinIO client: %v", err)
+		return core.NewRunnableResult(fmt.Errorf("error initializing MinIO client: %v", err))
 	}
 	name := m.Name
 	if len(name) == 0 {
@@ -49,50 +66,50 @@ func (m *Minio) Run(parent env.Env, variables map[string]interface{}) error {
 	}
 	file, err := os.Open(m.Path)
 	if err != nil {
-		return fmt.Errorf("error opening file: %v", err)
+		return core.NewRunnableResult(fmt.Errorf("error opening file: %v", err))
 	}
 	fi, err := file.Stat()
 	if err != nil {
-		return fmt.Errorf("error getting file info: %v", err)
+		return core.NewRunnableResult(fmt.Errorf("error getting file info: %v", err))
 	}
 	defer file.Close()
 	info, err := minioClient.PutObject(context.Background(), m.Bucket, name, file, fi.Size(), minio.PutObjectOptions{})
 	if err != nil {
-		return fmt.Errorf("error uploading file: %v", err)
+		return core.NewRunnableResult(fmt.Errorf("error uploading file: %v", err))
 	}
 
 	log.Infof("uploaded file: %s", info.Location)
 
-	return nil
+	return core.NewRunnableResult(nil)
 
 }
 
-func (m *Minio) validate(parent env.Env, variables map[string]interface{}) error {
+func (m *Minio) validate(runCtx *run_context.WorkflowRunContext, parent env.Env, variables map[string]interface{}) error {
 	var err error
-	m.config, err = run_context.InterpretPluginCfg(m.ctx, parent, m.config, variables)
+	m.Config, err = run_context.InterpretPluginCfg(runCtx, parent, m.Config, variables)
 	if err != nil {
 		return err
 	}
 
-	m.URL = parent.Expand(m.config["url"])
+	m.URL = parent.Expand(m.Config["url"])
 	if len(m.URL) <= 0 {
 		return fmt.Errorf("invalid url")
 	}
-	m.AccessKey = parent.Expand(m.config["access-key"])
+	m.AccessKey = parent.Expand(m.Config["access-key"])
 	if len(m.AccessKey) <= 0 {
 		return fmt.Errorf("invalid access-key")
 	}
-	m.SecretKey = parent.Expand(m.config["secret-key"])
+	m.SecretKey = parent.Expand(m.Config["secret-key"])
 	if len(m.SecretKey) <= 0 {
 		return fmt.Errorf("invalid secret-key")
 	}
-	m.Bucket = parent.Expand(m.config["bucket"])
+	m.Bucket = parent.Expand(m.Config["bucket"])
 	if len(m.Bucket) <= 0 {
 		return fmt.Errorf("invalid bucket")
 	}
-	m.Path = parent.Expand(m.config["path"])
+	m.Path = parent.Expand(m.Config["path"])
 
-	m.Name = parent.Expand(m.config["name"])
+	m.Name = parent.Expand(m.Config["name"])
 
 	return nil
 }

@@ -3,23 +3,26 @@ package githubaction
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-github/v60/github"
-	log "github.com/sirupsen/logrus"
-	"nadleeh/pkg/env"
 	"nadleeh/pkg/script"
 	"nadleeh/pkg/util"
+	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/run_context"
 	"path"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/google/go-github/v74/github"
+	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
 const Download = "download-artifact"
 const GhActionDownloadArtifact = "GH_ACTION_DOWNLOAD_ARTIFACT"
 
 type GitHubAction struct {
-	ctx             *run_context.WorkflowRunContext
+	Version         string
+	PluginPath      string
 	organization    string
 	repository      string
 	branch          string
@@ -28,19 +31,33 @@ type GitHubAction struct {
 	action          string
 	pr              int
 	artifactPathEnv string
-	config          map[string]string
+	Config          map[string]string
 }
 
-func (g *GitHubAction) Init(ctx *run_context.WorkflowRunContext, config map[string]string) error {
-	g.ctx = ctx
-	g.config = config
+func (g *GitHubAction) GetName() string {
+	return "github-action"
+}
+
+func (g *GitHubAction) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
 	return nil
 }
 
-func (g *GitHubAction) Run(parent env.Env, variables map[string]interface{}) error {
-	err := g.initConfig(parent, variables)
+func (g *GitHubAction) Resolve() error {
+	return nil
+}
+
+func (g *GitHubAction) CanRun() bool {
+	return true
+}
+
+func (g *GitHubAction) Compile(runCtx run_context.WorkflowRunContext) error {
+	return nil
+}
+
+func (g *GitHubAction) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
+	err := g.initConfig(runCtx, parent, ctx.GenerateMap())
 	if err != nil {
-		return err
+		return core.NewRunnableResult(err)
 	}
 	fmt.Printf("Run GitHub Action plugin, action %s", g.action)
 	client := github.NewClient(nil)
@@ -49,13 +66,13 @@ func (g *GitHubAction) Run(parent env.Env, variables map[string]interface{}) err
 	if g.pr > 0 {
 		pr, _, err = client.PullRequests.Get(context.Background(), g.organization, g.repository, g.pr)
 		if err != nil {
-			return err
+			return core.NewRunnableResult(err)
 		}
 	}
 
 	artifacts, _, err := client.Actions.ListArtifacts(context.Background(), g.organization, g.repository, nil)
 	if err != nil {
-		return err
+		return core.NewRunnableResult(err)
 	}
 	log.Infof("found %d artifacts for repo %s/%s first page", len(artifacts.Artifacts), g.organization, g.repository)
 	for _, arti := range artifacts.Artifacts {
@@ -79,9 +96,9 @@ func (g *GitHubAction) Run(parent env.Env, variables map[string]interface{}) err
 
 		log.Infof("found artifact %s", arti.GetName())
 
-		_, _, err := g.ctx.ShellCtx.Run(parent, fmt.Sprintf("mkdir -p %s", g.path), false)
+		_, _, err := runCtx.ShellCtx.Run(parent, fmt.Sprintf("mkdir -p %s", g.path), false)
 		if err != nil {
-			return err
+			return core.NewRunnableResult(err)
 		}
 		artiIrl := arti.GetArchiveDownloadURL()
 		if len(artiIrl) <= 0 {
@@ -93,7 +110,7 @@ func (g *GitHubAction) Run(parent env.Env, variables map[string]interface{}) err
 		artifactPath := path.Join(g.path, fmt.Sprintf("%s.zip", arti.GetName()))
 		err = jsHttp.DownloadFile("GET", artiIrl, artifactPath, &headers, nil)
 		if err != nil {
-			return err
+			return core.NewRunnableResult(err)
 		}
 		artiEnv := GhActionDownloadArtifact
 		if len(g.artifactPathEnv) > 0 {
@@ -103,17 +120,17 @@ func (g *GitHubAction) Run(parent env.Env, variables map[string]interface{}) err
 		parent.Set(artiEnv, artifactPath)
 		break
 	}
-	return nil
+	return core.NewRunnableResult(nil)
 }
 
-func (g *GitHubAction) initConfig(env env.Env, variables map[string]interface{}) error {
+func (g *GitHubAction) initConfig(runCtx *run_context.WorkflowRunContext, env env.Env, variables map[string]interface{}) error {
 	var err error
-	g.config, err = run_context.InterpretPluginCfg(g.ctx, env, g.config, variables)
+	g.Config, err = run_context.InterpretPluginCfg(runCtx, env, g.Config, variables)
 	if err != nil {
 		return err
 	}
 
-	g.repository = env.Expand(g.config["repository"])
+	g.repository = env.Expand(g.Config["repository"])
 	if len(g.repository) <= 0 {
 		return fmt.Errorf("invalid repository")
 	}
@@ -125,16 +142,16 @@ func (g *GitHubAction) initConfig(env env.Env, variables map[string]interface{})
 	g.organization = orgRepo[0]
 	g.repository = orgRepo[1]
 
-	if util.HasKey(g.config, "branch") {
-		g.branch = env.Expand(g.config["branch"])
+	if util.HasKey(g.Config, "branch") {
+		g.branch = env.Expand(g.Config["branch"])
 	}
 
-	if util.HasKey(g.config, "artifact-path-env") {
-		g.artifactPathEnv = env.Expand(g.config["artifact-path-env"])
+	if util.HasKey(g.Config, "artifact-path-env") {
+		g.artifactPathEnv = env.Expand(g.Config["artifact-path-env"])
 	}
 
-	if util.HasKey(g.config, "pr") {
-		pr := env.Expand(g.config["pr"])
+	if util.HasKey(g.Config, "pr") {
+		pr := env.Expand(g.Config["pr"])
 
 		if len(pr) > 0 {
 			prRegex := regexp.MustCompile("\\d+")
@@ -150,21 +167,21 @@ func (g *GitHubAction) initConfig(env env.Env, variables map[string]interface{})
 		}
 	}
 
-	g.path = env.Expand(g.config["path"])
+	g.path = env.Expand(g.Config["path"])
 	if len(g.path) <= 0 {
 		return fmt.Errorf("invalid path")
 	}
 
-	g.token = env.Expand(g.config["token"])
-	if len(g.token) > 0 && g.ctx.SecureCtx.IsEncrypted(g.token) {
+	g.token = env.Expand(g.Config["token"])
+	if len(g.token) > 0 && runCtx.SecureCtx.IsEncrypted(g.token) {
 		var err error
-		g.token, err = g.ctx.SecureCtx.DecryptStr(g.token)
+		g.token, err = runCtx.SecureCtx.DecryptStr(g.token)
 		if err != nil {
 			return err
 		}
 	}
 
-	g.action = env.Expand(g.config["action"])
+	g.action = env.Expand(g.Config["action"])
 	if len(g.action) <= 0 {
 		return fmt.Errorf("invalid action")
 	}

@@ -2,7 +2,7 @@ package run_context
 
 import (
 	log "github.com/sirupsen/logrus"
-	"nadleeh/pkg/env"
+	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
 func InterpretPluginCfg(ctx *WorkflowRunContext, parent env.Env, config map[string]string, variables map[string]interface{}) (map[string]string, error) {

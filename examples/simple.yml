@@ -22,11 +22,10 @@ jobs:
           cat bbb.zz || echo "no bbb"
           echo "back dir is $PG"
           echo "=====end======="
-#      - name: upload google drive
-#        uses: google-drive
-#        with:
-#          name: site-21-${DATE_STR}.tar.gz.zip
-#          path: /Users/jun/Downloads/site-21.tar.gz.zip
-#          cred: /Users/jun/Downloads/zhaojunlucky-2db52f66a725.json
-#          remote-path: 1HH9HdCPiIhzCbdfYzB5UFmvLZ9xu0OVo
+
+      - name: js plugin test
+        uses: js-plug@latest
+        plugin-path: /Users/jun/magicworldz/github/nadleeh/examples/js_plug
+        with:
+          data: this is data
 

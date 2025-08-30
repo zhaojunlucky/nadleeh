@@ -2,9 +2,10 @@ package argument
 
 import (
 	"fmt"
-	"github.com/akamensky/argparse"
 	"os"
 	"regexp"
+
+	"github.com/akamensky/argparse"
 )
 
 func NewNadleehCliParser() *argparse.Parser {
@@ -13,6 +14,13 @@ func NewNadleehCliParser() *argparse.Parser {
 		Required: false,
 		Validate: nil,
 		Help:     "Display help",
+		Default:  nil,
+	})
+
+	parser.Flag("v", "verbose", &argparse.Options{
+		Required: false,
+		Validate: nil,
+		Help:     "Enable verbose log",
 		Default:  nil,
 	})
 
@@ -29,6 +37,20 @@ func addRunCmd(parser *argparse.Parser) {
 		Required: true,
 		Validate: nil,
 		Help:     "Run the workflow file",
+		Default:  nil,
+	})
+
+	runCmd.String("p", "provider", &argparse.Options{
+		Required: false,
+		Validate: nil,
+		Help:     "The workflow provider",
+		Default:  nil,
+	})
+
+	runCmd.Flag("c", "check", &argparse.Options{
+		Required: false,
+		Validate: nil,
+		Help:     "Only check the workflow",
 		Default:  nil,
 	})
 
