@@ -3,6 +3,7 @@ package workflow
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"nadleeh/pkg/util"
 	"os"
 	"path/filepath"
@@ -68,14 +69,9 @@ func parseEnv(env map[string]string, envFiles []string) (map[string]string, erro
 	return env, nil
 }
 
-func ParseWorkflow(filePath string) (*Workflow, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+func ParseWorkflow(ymlFile io.Reader) (*Workflow, error) {
 	var rawWorkflow workflowDefinition
-	if err := yaml.NewDecoder(file).Decode(&rawWorkflow); err != nil {
+	if err := yaml.NewDecoder(ymlFile).Decode(&rawWorkflow); err != nil {
 		return nil, err
 	}
 	wfEnv, err := parseEnv(rawWorkflow.Env, rawWorkflow.EnvFiles)
@@ -98,8 +94,9 @@ func ParseWorkflow(filePath string) (*Workflow, error) {
 		var job Job
 		job.Name = node.Value
 
-		err := rawWorkflow.Jobs.Content[i+1].Decode(&job)
+		err = rawWorkflow.Jobs.Content[i+1].Decode(&job)
 		if err != nil {
+			log.Errorf("failed to parse job %s: %w", job.Name, err)
 			return nil, fmt.Errorf("failed to parse job %s: %w", job.Name, err)
 		}
 

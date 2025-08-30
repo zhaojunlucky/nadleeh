@@ -17,6 +17,13 @@ func NewNadleehCliParser() *argparse.Parser {
 		Default:  nil,
 	})
 
+	parser.Flag("v", "verbose", &argparse.Options{
+		Required: false,
+		Validate: nil,
+		Help:     "Enable verbose log",
+		Default:  nil,
+	})
+
 	addRunCmd(parser)
 	addEncryptCmd(parser)
 	addGenerateKeyPairCmd(parser)
@@ -30,6 +37,13 @@ func addRunCmd(parser *argparse.Parser) {
 		Required: true,
 		Validate: nil,
 		Help:     "Run the workflow file",
+		Default:  nil,
+	})
+
+	runCmd.String("p", "provider", &argparse.Options{
+		Required: false,
+		Validate: nil,
+		Help:     "The workflow provider",
 		Default:  nil,
 	})
 

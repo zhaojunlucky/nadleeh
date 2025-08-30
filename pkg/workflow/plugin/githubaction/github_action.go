@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/go-github/v60/github"
+	"github.com/google/go-github/v74/github"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
 )

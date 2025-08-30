@@ -2,6 +2,7 @@ package file
 
 import (
 	"os"
+	"path/filepath"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
@@ -13,6 +14,11 @@ type FileLock struct {
 }
 
 func (l *FileLock) Lock() error {
+	err := os.MkdirAll(filepath.Dir(l.lockFile), os.ModePerm)
+	if err != nil {
+		log.Errorf("failed to create lock file dir %s", l.lockFile)
+		return err
+	}
 	lockFile, err := os.Create(l.lockFile)
 	if err != nil {
 		log.Errorf("failed to create lock file: %v", err)

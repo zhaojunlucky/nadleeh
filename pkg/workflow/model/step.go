@@ -30,7 +30,9 @@ type Step struct {
 func (step *Step) Precheck() error {
 	count := util.Bool2Int(len(step.Run) > 0) + util.Bool2Int(len(step.Script) > 0) + util.Bool2Int(len(step.Uses) > 0)
 	if count > 1 {
-		return fmt.Errorf("multiple script/run/uses specified in step %s", step.Name)
+		err := fmt.Errorf("multiple script/run/uses specified in step %s", step.Name)
+		log.Error(err)
+		return err
 	}
 
 	//if step.RequirePlugin() && !slices.Contains(plugin.SupportedPlugins, step.Uses) {
@@ -44,6 +46,7 @@ func (step *Step) Precheck() error {
 	} else if step.RequirePlugin() {
 		plug, err := plugin.NewPlugin(step.Uses, step.PluginPath, step.With)
 		if err != nil {
+			log.Errorf("failed to create plugin %s for step %s", step.Uses, step.Name)
 			return err
 		}
 		step.runner = &PluginRunner{plug: plug, StepName: step.Name, Config: step.With}
@@ -90,6 +93,7 @@ func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx
 		if step.HasIf() {
 			val, err := step.evalIf(runCtx, parent, ctx)
 			if err != nil {
+				log.Errorf("failed to eval if for step %s", step.Name)
 				stepStatus.Finish(err)
 				return core.NewRunnable(err, -1, err.Error())
 			} else if !val {
@@ -106,6 +110,7 @@ func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx
 	}
 
 	stepStatus.Start()
+	log.Infof("start step %s", step.Name)
 
 	stepEnv, err := InterpretEnv(&runCtx.JSCtx, parent, step.Env, ctx.GenerateMap())
 	if err != nil {
@@ -117,6 +122,7 @@ func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx
 	result := step.runner.Do(stepEnv, runCtx, ctx)
 
 	if result.ReturnCode != 0 {
+		log.Errorf("step %s failed %v", step.Name, result.Err)
 		stepStatus.Finish(result.Err)
 		if step.HasContinueOnError() {
 			log.Infof("step %s failed, check continue on error", step.Name)

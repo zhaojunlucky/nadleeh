@@ -76,6 +76,8 @@ func (job *Job) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *
 	jobEnv, err := InterpretEnv(&runCtx.JSCtx, parent, job.Env, ctx.GenerateMap())
 	if err != nil {
 		log.Errorf("Failed to interpret job env %v", err)
+		log.Errorf("job %s failed", job.Name)
+		log.Debugf("job %s error: %s", jobStatus.Reason())
 		jobStatus.Finish(err)
 		return core.NewRunnableResult(err)
 	}
@@ -89,9 +91,12 @@ func (job *Job) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *
 		}
 	}
 	if len(errResults) == 0 {
+		log.Debugf("job %s passed", job.Name)
 		jobStatus.Finish([]error{}...)
 		return core.NewRunnableResult(nil)
 	} else {
+		log.Errorf("job %s failed", job.Name)
+		log.Debugf("job %s error: %s", jobStatus.Reason())
 		jobStatus.Finish(errResults...)
 		return core.NewRunnable(errors.Join(errResults...), 255, "")
 	}

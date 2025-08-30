@@ -4,6 +4,7 @@ import (
 	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/run_context"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
@@ -15,6 +16,7 @@ type JSRunner struct {
 
 func (r *JSRunner) Compile(runCtx run_context.WorkflowRunContext) error {
 	err := runCtx.JSCtx.Compile(r.Script)
+	log.Errorf("js compile error: %v", err)
 	if err != nil {
 		r.hasError = 1
 	} else {
@@ -25,6 +27,9 @@ func (r *JSRunner) Compile(runCtx run_context.WorkflowRunContext) error {
 
 func (r *JSRunner) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	retCode, output, err := runCtx.JSCtx.Run(parent, r.Script, ctx.GenerateMap())
+	if err != nil {
+		log.Errorf("failed to run js: %v", err)
+	}
 	return &core.RunnableResult{
 		Err:        err,
 		ReturnCode: retCode,

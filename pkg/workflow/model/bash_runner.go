@@ -17,6 +17,7 @@ type BashRunner struct {
 // Compile compiles the bash script
 func (r *BashRunner) Compile(runCtx run_context.WorkflowRunContext) error {
 	err := runCtx.ShellCtx.Compile(r.Script)
+	log.Errorf("shell compile error: %v", err)
 	if err != nil {
 		r.hasError = 1
 	} else {

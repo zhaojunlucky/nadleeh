@@ -51,8 +51,10 @@ type JSPlug struct {
 func (j *JSPlug) Compile(runCtx run_context.WorkflowRunContext) error {
 	_, err := runCtx.JSCtx.CompileFile(j.pm.MainFile)
 	if err != nil {
+		log.Errorf("failed to compile main js %s for plugin %s: %v", j.pm.MainFile, j.PluginName, err)
 		j.hasError = 1
 	} else {
+		log.Debugf("plugin %s js compiled successfully", j.PluginName)
 		j.hasError = 2
 	}
 	return err
@@ -61,13 +63,18 @@ func (j *JSPlug) Compile(runCtx run_context.WorkflowRunContext) error {
 func (j *JSPlug) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	var err error
 	argMaps := ctx.GenerateMap()
+	log.Info("run plugin %s", j.PluginName)
 	j.Config, err = run_context.InterpretPluginCfg(runCtx, parent, j.Config, argMaps)
 	if err != nil {
+		log.Errorf("failed to interpreset plugin %s env %v", j.PluginName, err)
 		return core.NewRunnableResult(err)
 	}
 
 	plugEnv := env.NewReadEnv(parent, j.Config)
 	ret, output, err := runCtx.JSCtx.RunFile(plugEnv, j.pm.MainFile, argMaps)
+	if err != nil {
+		log.Errorf("plugin %s failed %v", j.PluginName, err)
+	}
 	return core.NewRunnable(err, ret, output)
 }
 
@@ -83,17 +90,19 @@ func (j *JSPlug) PreflightCheck(parent env.Env, args env.Env, runCtx *run_contex
 	file, err := os.Open(j.pm.ManifestFile)
 	if err != nil {
 		log.Errorf("failed to read manifest file %s", j.pm.ManifestFile)
+		return err
 	}
 	err = yaml.NewDecoder(file).Decode(&j.manifest)
 	if err != nil {
 		log.Errorf("failed to parse manifest file %s", j.pm.ManifestFile)
+		return err
 	}
 	plugArgs := j.manifest.runtime.args
 
 	for _, pa := range plugArgs {
 		if !args.Contains(pa.name) {
 			if pa.required {
-				return fmt.Errorf("required argument '%s' is not provided", pa.name)
+				return fmt.Errorf("required argument '%s' is not provided for plugin %s", pa.name, j.PluginName)
 			}
 		} else if len(pa.pattern) > 0 {
 			reg, err := regexp2.Compile(pa.pattern, regexp2.IgnoreCase)
@@ -105,7 +114,7 @@ func (j *JSPlug) PreflightCheck(parent env.Env, args env.Env, runCtx *run_contex
 				return err
 			}
 			if !v {
-				return fmt.Errorf("argument '%s' value doesn't match pattern '%s'", pa.name, pa.pattern)
+				return fmt.Errorf("argument '%s' value doesn't match pattern '%s' for plugin %s", pa.name, pa.pattern, j.PluginName)
 			}
 		}
 

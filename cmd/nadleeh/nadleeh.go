@@ -56,6 +56,7 @@ func setupLog() {
 		},
 	})
 	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
+	log.SetLevel(log.InfoLevel)
 }
 
 func createArgsMap(args []argparse.Arg, exclude []string) map[string]argparse.Arg {
@@ -85,6 +86,11 @@ func main() {
 		if arg.GetLname() == "help" && arg.GetParsed() {
 			fmt.Println(parser.Usage(nil))
 			return
+		} else if arg.GetLname() == "verbose" && arg.GetParsed() {
+			val := arg.GetResult().(*bool)
+			if *val {
+				log.SetLevel(log.DebugLevel)
+			}
 		}
 	}
 

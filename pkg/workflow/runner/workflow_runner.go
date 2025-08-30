@@ -5,18 +5,10 @@ import (
 	"nadleeh/pkg/workflow/core"
 	workflow "nadleeh/pkg/workflow/model"
 	"nadleeh/pkg/workflow/run_context"
-	"os"
-	"path"
-	"strings"
 
 	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
-)
-
-var (
-	Run       = "run"
-	Preflight = "preflight"
 )
 
 type WorkflowRunner struct {
@@ -27,20 +19,17 @@ func RunWorkflow(args map[string]argparse.Arg, argEnv env.Env) {
 	if err != nil {
 		log.Fatalf("failed to get yaml file arg %v", err)
 	}
-	wYml := *yml
-	log.Infof("run workflow file: %s", wYml)
-	ext := strings.ToLower(path.Ext(wYml))
-	if ext != ".yaml" && ext != ".yml" {
-		log.Fatalf("%s must be a yaml file", wYml)
+	if yml == nil {
+		log.Fatalf("invalid -f arg")
 	}
-	fi, err := os.Stat(wYml)
+	log.Infof("load workflow file %s", *yml)
+	ymlFile, err := workflow.LoadWorkflowFile(*yml, args)
 	if err != nil {
-		log.Fatalf("failed to get yaml file %v", err)
+		log.Fatal(err)
 	}
-	if fi.IsDir() {
-		log.Fatalf("%s must be a file", wYml)
-	}
-	wf, err := workflow.ParseWorkflow(wYml)
+
+	log.Debugf("parse workflow file %s", *yml)
+	wf, err := workflow.ParseWorkflow(ymlFile)
 	if err != nil {
 		log.Fatalf("failed to parse workflow %v", err)
 	}
@@ -61,7 +50,7 @@ func RunWorkflow(args map[string]argparse.Arg, argEnv env.Env) {
 	checkArg := args["check"]
 
 	if !*checkArg.GetResult().(*bool) {
-		log.Infof("start run workflow")
+		log.Infof("run workflow file: %s", *yml)
 		result := wf.Do(env.OSEnv, runCtx, &core.RunnableContext{
 			NeedOutput: false,
 			Args:       argEnv,

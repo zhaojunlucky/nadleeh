@@ -42,16 +42,20 @@ func (p *PluginMetadata) Load() error {
 	if p.scheme == Local {
 		fiInfo, err := os.Stat(p.LocalPath)
 		if err != nil {
+			log.Errorf("plugin local path %s doesn't exist", p.LocalPath)
 			return err
 		}
 		if !fiInfo.IsDir() {
+			log.Errorf("plugin local path %s is not a dir", p.LocalPath)
 			return fmt.Errorf("invalid path %s for plugin %s", p.LocalPath, p.Name)
 		}
 		fiInfo, err = os.Stat(p.MainFile)
 		if err != nil {
+			log.Errorf("plugin main js %s doesn't exist", p.MainFile)
 			return err
 		}
 		if fiInfo.IsDir() {
+			log.Errorf("plugin main js %s is not a file", p.MainFile)
 			return fmt.Errorf("invalid main file %s for plugin %s", p.MainFile, p.Name)
 		}
 		return p.checkPlugin()
@@ -70,25 +74,30 @@ func (p *PluginMetadata) Load() error {
 		if isDir {
 			cmd := exec.Command("git", "-C", p.LocalPath, "status", "--porcelain")
 			output, err := cmd.CombinedOutput()
-			if err != nil {
-				return err
-			}
-			status := string(output)
-			if len(strings.TrimSpace(status)) == 0 {
-				return p.checkPlugin()
+			if err == nil {
+				status := string(output)
+				if len(strings.TrimSpace(status)) == 0 {
+					return p.checkPlugin()
+				} else {
+					log.Warnf("plugin local repo path %s is not clean will reclone", p.LocalPath)
+				}
 			}
 
 		}
 
 		if err = os.Remove(p.LocalPath); err != nil {
+			if !os.IsNotExist(err) {
+				log.Errorf("failed to remove existing plugin path %s: %v", p.LocalPath, err)
+				return err
+			}
+		}
+
+		if err = os.MkdirAll(p.LocalPath, os.ModePerm); err != nil {
+			log.Errorf("failed to create plugin local path %s: %v", p.LocalPath, err)
 			return err
 		}
 
-		if err = os.MkdirAll(filepath.Dir(p.LocalPath), os.ModePerm); err != nil {
-			return err
-		}
-
-		cmd := exec.Command("git", "-C", p.LocalPath, "clone", "-b", p.Version)
+		cmd := exec.Command("git", "clone", "-b", p.Version, fmt.Sprintf("https://github.com/%s", p.Name), p.LocalPath)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			return err
@@ -102,17 +111,21 @@ func (p *PluginMetadata) Load() error {
 func (p *PluginMetadata) checkPlugin() error {
 	exists, err := file.FileExists(p.MainFile)
 	if err != nil {
+		log.Errorf("plugin main js %s doesn't exist: %v", p.MainFile, err)
 		return err
 	}
 	if !exists {
+		log.Errorf("plugin main js %s doesn't exist", p.MainFile)
 		return fmt.Errorf("%s doesn't exist", p.MainFile)
 	}
 
 	exists, err = file.FileExists(p.ManifestFile)
 	if err != nil {
+		log.Errorf("plugin manifest %s doesn't exist: %v", p.ManifestFile, err)
 		return err
 	}
 	if !exists {
+		log.Errorf("plugin mmanifest %s doesn't exist", p.ManifestFile)
 		return fmt.Errorf("%s doesn't exist", p.ManifestFile)
 	}
 	return nil
@@ -120,6 +133,7 @@ func (p *PluginMetadata) checkPlugin() error {
 
 func NewPluginMetadata(name, version, token, localPath string) (*PluginMetadata, error) {
 	if len(version) == 0 {
+		log.Errorf("version is missing for plugin %s", name)
 		return nil, fmt.Errorf("version is not specified")
 	}
 
@@ -140,24 +154,11 @@ func NewPluginMetadata(name, version, token, localPath string) (*PluginMetadata,
 		pm.lockFile = filepath.Join(LocalLockPath, fmt.Sprintf("%s-%s.lock", name, version))
 	}
 	pm.MainFile = filepath.Join(pm.LocalPath, Main)
-
-	exist, err := file.FileExists(pm.MainFile)
-	if err != nil {
-		return nil, err
-	}
-	if !exist {
-		return nil, fmt.Errorf("plugin main.js %s doesn't exist", pm.MainFile)
-	}
 	pm.ManifestFile = filepath.Join(pm.LocalPath, Manifest)
 
-	exist, err = file.FileExists(pm.ManifestFile)
-	if err != nil {
+	if err := pm.Load(); err != nil {
 		return nil, err
 	}
-	if !exist {
-		return nil, fmt.Errorf("plugin manifest.yml %s doesn't exist", pm.ManifestFile)
-	}
-
 	return pm, nil
 }
 
