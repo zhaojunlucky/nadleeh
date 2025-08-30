@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"nadleeh/pkg/common"
+	"nadleeh/pkg/file"
 	"strings"
 
 	"github.com/google/uuid"
@@ -96,23 +97,7 @@ func (sh *ShellContext) Run(env env.Env, shell string, needOutput bool) (int, st
 	}
 
 	if err != nil {
-		data, newErr := os.ReadFile(tmpShFile)
-		if newErr == nil {
-			lines := strings.Split(string(data), "\n")
-
-			// Iterate over the slice with the index and value.
-			// The index `i` gives us the line number.
-			fmt.Println("======bash file======")
-			for i, line := range lines {
-				// A common issue is an empty string at the beginning due to the initial newline.
-				// This condition skips any empty lines.
-				if line != "" {
-					fmt.Printf("%d: %s\n", i+1, line)
-				}
-			}
-			fmt.Println("======end bash file======")
-		}
-
+		_ = file.LogFileWithLineNo("bash", tmpShFile)
 		return 1, output, err
 	}
 	return 0, output, nil

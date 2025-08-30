@@ -18,7 +18,6 @@ jobs:
       - run: |
           #printenv
           #ls ~
-          aaa
           PG=$BACK_DIR/PG
           cat bbb.zz || echo "no bbb"
           echo "back dir is $PG"

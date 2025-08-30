@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 func DirExists(path string) (bool, error) {
@@ -35,4 +36,30 @@ func FileExists(path string) (bool, error) {
 	} else {
 		return false, fmt.Errorf("path %s is a file", path)
 	}
+}
+
+func LogFileWithLineNo(name, path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	return LogStrWithLineNo(name, string(data))
+}
+
+func LogStrWithLineNo(name, str string) error {
+	lines := strings.Split(str, "\n")
+
+	// Iterate over the slice with the index and value.
+	// The index `i` gives us the line number.
+	fmt.Printf("======%s file======\n", name)
+	for i, line := range lines {
+		// A common issue is an empty string at the beginning due to the initial newline.
+		// This condition skips any empty lines.
+		if line != "" {
+			fmt.Printf("%d: %s\n", i+1, line)
+		}
+	}
+	fmt.Printf("======end %s file======\n", name)
+	return nil
 }

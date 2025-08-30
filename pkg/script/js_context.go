@@ -3,6 +3,7 @@ package script
 import (
 	"fmt"
 	"nadleeh/pkg/common"
+	"nadleeh/pkg/file"
 
 	"github.com/dop251/goja/parser"
 	"github.com/dop251/goja_nodejs/console"
@@ -180,6 +181,7 @@ func (js *JSContext) Run(env env.Env, script string, variables map[string]interf
 		output = val.String()
 	}
 	if err != nil {
+		_ = file.LogStrWithLineNo("JS", script)
 		return 1, output, err
 	}
 	return 0, output, nil
