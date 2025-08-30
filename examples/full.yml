@@ -7,6 +7,7 @@ env:
 
 checks:
   private-key: false # whether to use private key
+  requires-root: true # whether to require root
   args:
     - name: pr
       pattern: "\\d+" # value match regex
