@@ -33,8 +33,9 @@ func (r *BashRunner) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, 
 		log.Errorf("Failed to eval run for step %s", r.Name)
 		return core.NewRunnableResult(err)
 	}
+	bashEnv := env.NewReadWriteEnv(parent, ctx.Args.GetAll())
 
-	retCode, output, err := runCtx.ShellCtx.Run(parent, run, ctx.NeedOutput)
+	retCode, output, err := runCtx.ShellCtx.Run(bashEnv, run, ctx.NeedOutput)
 	return &core.RunnableResult{
 		Err:        err,
 		ReturnCode: retCode,
