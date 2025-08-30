@@ -3,6 +3,7 @@ package shell
 import (
 	"fmt"
 	"nadleeh/pkg/common"
+	"nadleeh/pkg/file"
 	"strings"
 
 	"github.com/google/uuid"
@@ -76,7 +77,7 @@ func (sh *ShellContext) Run(env env.Env, shell string, needOutput bool) (int, st
 	for key, value := range common.Sys.GetInfo().GetAll() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
-	
+
 	for key, value := range env.GetAll() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
 	}
@@ -96,6 +97,7 @@ func (sh *ShellContext) Run(env env.Env, shell string, needOutput bool) (int, st
 	}
 
 	if err != nil {
+		_ = file.LogFileWithLineNo("bash", tmpShFile)
 		return 1, output, err
 	}
 	return 0, output, nil
