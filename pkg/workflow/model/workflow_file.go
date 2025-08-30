@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"nadleeh/internal/argument"
+	"nadleeh/pkg/file"
 	"net/http"
 	"os"
 	"os/user"
@@ -24,6 +25,9 @@ import (
 var (
 	bearer = "Bearer"
 	basic  = "Basic"
+
+	githubProvider = "github"
+	httpsProvider  = "https"
 )
 
 type workflowCred struct {
@@ -37,12 +41,20 @@ type workflowProvider struct {
 	Cred   workflowCred `yaml:"cred"`
 }
 
+var defaultGitHubProvider = workflowProvider{
+	Type:   githubProvider,
+	Server: "https://github.com",
+	Cred: workflowCred{
+		Type: "",
+	},
+}
+
 func (w *workflowProvider) Download(name string) (io.Reader, error) {
 	log.Infof("download workflow file %s provided by provider %s", name, w.Type)
 	switch w.Type {
-	case "github":
+	case githubProvider:
 		return w.downloadGitHub(name)
-	case "https":
+	case httpsProvider:
 		return w.downloadHTTP(name)
 	default:
 		return nil, fmt.Errorf("unsupported provider type '%s'", w.Type)
@@ -151,17 +163,29 @@ func LoadWorkflowFile(yml string, args map[string]argparse.Arg) (io.Reader, erro
 			return nil, fmt.Errorf("failed to get current user: %w", err)
 		}
 
-		profileFile := filepath.Join(currentUser.HomeDir, ".nadleeh/providers/", *provider)
-		log.Infof("provider file %s", profileFile)
-		file, err := os.Open(profileFile)
+		providerFile := filepath.Join(currentUser.HomeDir, ".nadleeh/providers/", *provider)
+		log.Infof("provider file %s", providerFile)
+		val, err := file.FileExists(providerFile)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read provider %s: %v", *provider, err)
-		}
-		defer file.Close()
-		var wp workflowProvider
-		if err := yaml.NewDecoder(file).Decode(&wp); err != nil {
+			log.Errorf("failed to check provider file %s", provider)
 			return nil, err
 		}
+		var wp workflowProvider
+		if !val && *provider == githubProvider {
+			log.Infof("github provider file %s doesn't exist, use default", *provider)
+			wp = defaultGitHubProvider
+		} else {
+			pFile, err := os.Open(providerFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read provider %s: %v", *provider, err)
+			}
+			defer pFile.Close()
+
+			if err := yaml.NewDecoder(pFile).Decode(&wp); err != nil {
+				return nil, err
+			}
+		}
+
 		return wp.Download(yml)
 
 	}
