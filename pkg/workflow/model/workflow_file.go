@@ -71,10 +71,26 @@ func (w *workflowProvider) downloadHTTP(name string) (io.Reader, error) {
 }
 
 func (w *workflowProvider) downloadGitHub(name string) (io.Reader, error) {
-	segs := strings.Split(name, "/")
-	if len(segs) < 3 {
-		return nil, fmt.Errorf("invalid github workflow file, it should bt <owner>/<repo>/<one or more paths>")
+	owner := "nadleehz"
+	repo := "workflows"
+	var path string
+
+	if strings.HasPrefix(name, "@") {
+		log.Infof("use default workflows repository %s/%s", owner, repo)
+		path = name[1:]
+	} else {
+		segs := strings.Split(name, "/")
+		if len(segs) < 3 {
+			return nil, fmt.Errorf("invalid github workflow file, it should bt <owner>/<repo>/<one or more paths>")
+		}
+
+		owner = segs[0]
+		repo = segs[1]
+		path = strings.Join(segs[2:], "/")
 	}
+
+	log.Infof("workflow file %s/%s/%s", owner, repo, path)
+
 	if w.Cred.Type != "" && w.Cred.Type != bearer {
 		return nil, fmt.Errorf("only Bearer or empty cred type supported for github provider")
 	}
@@ -83,7 +99,7 @@ func (w *workflowProvider) downloadGitHub(name string) (io.Reader, error) {
 		client = client.WithAuthToken(w.Cred.Password)
 	}
 
-	fileContent, _, _, err := client.Repositories.GetContents(context.Background(), segs[0], segs[1], strings.Join(segs[2:], "/"), nil)
+	fileContent, _, _, err := client.Repositories.GetContents(context.Background(), owner, repo, path, nil)
 	if err != nil {
 		return nil, err
 	}
