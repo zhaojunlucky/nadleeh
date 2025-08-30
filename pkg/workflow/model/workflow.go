@@ -28,17 +28,23 @@ type WorkflowArg struct {
 }
 
 type WorkflowCheck struct {
-	PrivateKey bool          `yaml:"private-key"`
-	Args       []WorkflowArg `yaml:"args"`
-	Envs       []WorkflowArg `yaml:"envs"`
+	PrivateKey   bool          `yaml:"private-key"`
+	RequiresRoot bool          `yaml:"requires-root"`
+	Args         []WorkflowArg `yaml:"args"`
+	Envs         []WorkflowArg `yaml:"envs"`
 }
 
 // Precheck validates the workflow definition
 func (w *Workflow) Precheck() error {
 	var workflowErrs []error
 
+	err := w.preCheck()
+	if err != nil {
+		workflowErrs = append(workflowErrs, err)
+	}
+
 	for _, job := range w.Jobs {
-		err := job.Precheck()
+		err = job.Precheck()
 		if err != nil {
 			workflowErrs = append(workflowErrs, err)
 		}
@@ -163,4 +169,12 @@ func (w *Workflow) changeWorkingDir(workflowEnv *env.ReadWriteEnv) {
 			log.Fatal(err)
 		}
 	}
+}
+
+func (w *Workflow) preCheck() error {
+	if w.Checks.RequiresRoot && os.Geteuid() != 0 {
+		log.Errorf("workflow requires to run as root/sudo, but it's running with a normal user %d", os.Geteuid())
+		return fmt.Errorf("workflow requires to run as root/sudo, but it's running with a normal user %d", os.Geteuid())
+	}
+	return nil
 }
