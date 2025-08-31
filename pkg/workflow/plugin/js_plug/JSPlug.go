@@ -2,6 +2,7 @@ package js_plug
 
 import (
 	"fmt"
+	workflow "nadleeh/pkg/common"
 	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/run_context"
 	"os"
@@ -70,7 +71,7 @@ func (j *JSPlug) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx 
 		return core.NewRunnableResult(err)
 	}
 
-	plugEnv := env.NewReadEnv(parent, j.Config)
+	plugEnv := workflow.NewWriteOnParentEnv(parent, j.Config)
 	ret, output, err := runCtx.JSCtx.RunFile(plugEnv, j.pm.MainFile, argMaps)
 	if err != nil {
 		log.Errorf("plugin %s failed %v", j.PluginName, err)

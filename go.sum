@@ -103,6 +103,8 @@ github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 github.com/zhaojunlucky/golib v0.0.0-20250826115533-53ab4b166518 h1:luGgS+t2juXJqiK2G6QYJ6mQXPi09z77RYrt6iFSr9g=
 github.com/zhaojunlucky/golib v0.0.0-20250826115533-53ab4b166518/go.mod h1:KXebaxHyIp4SorbsqtEAoSzJWVDws0tCXYcH129Wy7k=
+github.com/zhaojunlucky/golib v0.0.0-20250831011716-3be851d2841c h1:ryB9zRqiSdp3yNJU7HcvIu8y4PoomcDDLu22Z255lNs=
+github.com/zhaojunlucky/golib v0.0.0-20250831011716-3be851d2841c/go.mod h1:KXebaxHyIp4SorbsqtEAoSzJWVDws0tCXYcH129Wy7k=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.63.0 h1:RbKq8BG0FI8OiXhBfcRtqqHcZcka+gU3cskNuf05R18=

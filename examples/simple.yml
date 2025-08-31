@@ -16,8 +16,21 @@ jobs:
           env.set('BACK_DIR', `${env.get('BACK_BASE_DIR')}/${dateStr}`)
           env.set('DATE_STR', dateStr)
       - run: |
-          #printenv
-          #ls ~
+          # printenv
+          # ls ~
+          if [[ -z "$BACK_DIR" ]]; then
+            echo "BACK_DIR is empty"
+            exit 1
+          else
+            echo "BACK_DIR is $BACK_DIR"
+          fi
+          
+          if [[ -z "DATE_STR" ]]; then
+            echo "DATE_STR is empty"
+            exit 1
+          else
+            echo "DATE_STR is $DATE_STR"
+          fi
           PG=$BACK_DIR/PG
           cat bbb.zz || echo "no bbb"
           echo "back dir is $PG"
