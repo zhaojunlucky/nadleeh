@@ -40,8 +40,8 @@ func (l *FileLock) Unlock() error {
 		if err != nil {
 			log.Errorf("failed to release lock: %v", err)
 		}
-		return err
 		l.close()
+		return err
 	}
 	return nil
 }

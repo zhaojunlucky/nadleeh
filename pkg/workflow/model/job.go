@@ -77,7 +77,7 @@ func (job *Job) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *
 	if err != nil {
 		log.Errorf("Failed to interpret job env %v", err)
 		log.Errorf("job %s failed", job.Name)
-		log.Debugf("job %s error: %s", jobStatus.Reason())
+		log.Debugf("job %s error: %s", job.Name, jobStatus.Reason())
 		jobStatus.Finish(err)
 		return core.NewRunnableResult(err)
 	}
@@ -96,7 +96,7 @@ func (job *Job) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *
 		return core.NewRunnableResult(nil)
 	} else {
 		log.Errorf("job %s failed", job.Name)
-		log.Debugf("job %s error: %s", jobStatus.Reason())
+		log.Debugf("job %s error: %s", job.Name, jobStatus.Reason())
 		jobStatus.Finish(errResults...)
 		return core.NewRunnable(errors.Join(errResults...), 255, "")
 	}

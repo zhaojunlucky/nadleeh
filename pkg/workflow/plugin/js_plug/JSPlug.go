@@ -64,7 +64,7 @@ func (j *JSPlug) Compile(runCtx run_context.WorkflowRunContext) error {
 func (j *JSPlug) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
 	var err error
 	argMaps := ctx.GenerateMap()
-	log.Info("run plugin %s", j.PluginName)
+	log.Infof("run plugin %s", j.PluginName)
 	j.Config, err = run_context.InterpretPluginCfg(runCtx, parent, j.Config, argMaps)
 	if err != nil {
 		log.Errorf("failed to interpreset plugin %s env %v", j.PluginName, err)

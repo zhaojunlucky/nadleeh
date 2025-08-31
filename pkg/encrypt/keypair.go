@@ -2,10 +2,11 @@ package encrypt
 
 import (
 	"fmt"
+	"nadleeh/internal/argument"
+
 	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/security"
-	"nadleeh/internal/argument"
 
 	"os"
 	"path"

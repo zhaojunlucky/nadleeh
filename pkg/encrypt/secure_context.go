@@ -4,11 +4,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/zhaojunlucky/golib/pkg/security"
 	"os"
 	"regexp"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/security"
 )
 
 type SecureContext struct {

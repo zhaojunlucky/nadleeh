@@ -3,14 +3,15 @@ package encrypt
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/akamensky/argparse"
-	log "github.com/sirupsen/logrus"
-	"github.com/zhaojunlucky/golib/pkg/security"
 	"io"
 	"nadleeh/internal/argument"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/akamensky/argparse"
+	log "github.com/sirupsen/logrus"
+	"github.com/zhaojunlucky/golib/pkg/security"
 )
 
 func Encrypt(cmd *argparse.Command, argsMap map[string]argparse.Arg) {

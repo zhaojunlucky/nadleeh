@@ -183,7 +183,7 @@ func LoadWorkflowFile(yml string, args map[string]argparse.Arg) (io.Reader, erro
 		log.Infof("provider file %s", providerFile)
 		val, err := file.FileExists(providerFile)
 		if err != nil {
-			log.Errorf("failed to check provider file %s", provider)
+			log.Errorf("failed to check provider file %s", *provider)
 			return nil, err
 		}
 		var wp workflowProvider
