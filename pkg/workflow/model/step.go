@@ -88,25 +88,24 @@ func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx
 
 	futureStatus := ctx.JobStatus.FutureStatus()
 
-	if futureStatus == core.Fail {
-		log.Warnf("previous steps failed, check if need to run current step: %s", step.Name)
-		if step.HasIf() {
-			val, err := step.evalIf(runCtx, parent, ctx)
-			if err != nil {
-				log.Errorf("failed to eval if for step %s", step.Name)
-				stepStatus.Finish(err)
-				return core.NewRunnable(err, -1, err.Error())
-			} else if !val {
-				stepStatus.Finish([]error{}...)
-				log.Errorf("step %s if is false skip", step.Name)
-				return core.NewRunnableResult(nil)
-			}
-
-		} else {
-			log.Warnf("step %s no if conditon, skip", step.Name)
-
+	log.Warnf("previous steps failed, check if need to run current step: %s", step.Name)
+	var ifVal bool
+	var err error
+	if step.HasIf() {
+		ifVal, err = step.evalIf(runCtx, parent, ctx)
+		if err != nil {
+			log.Errorf("failed to eval if for step %s", step.Name)
+			stepStatus.Finish(err)
+			return core.NewRunnable(err, -1, err.Error())
+		} else if !ifVal {
+			log.Errorf("step %s if evaluated as false, skip it", step.Name)
+			stepStatus.Skipped()
 			return core.NewRunnableResult(nil)
 		}
+	} else if futureStatus == core.Fail {
+		log.Warnf("step %s skipped due to previous error", step.Name)
+		stepStatus.Skipped()
+		return core.NewRunnableResult(nil)
 	}
 
 	stepStatus.Start()

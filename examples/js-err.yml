@@ -15,10 +15,10 @@ jobs:
         continue-on-error: ${{ true }}
         script: |
           console.log("test js error")
-          if (!env.get("DOESNT_EXIST"))
-          throw new Error("env DOESNT_EXIST is not defined")
+#          if (!env.get("DOESNT_EXIST"))
+#          throw new Error("env DOESNT_EXIST is not defined")
       - name: telegram message
-        if: ${{ job.status() == "Fail" }}
+        if: ${{ job.futureStatus() == "Fail" }}
         uses: telegram
         with:
           key: ${TG_BOT_KEY}
