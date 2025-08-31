@@ -14,29 +14,29 @@ import (
 )
 
 type metadata struct {
-	workflowVersion string `yaml:"workflow_version"`
-	version         string `yaml:"version"`
-	name            string `yaml:"name"`
-	description     string `yaml:"description"`
-	platforms       []struct {
-		os      string `yaml:"os"`
-		arch    string `yaml:"arch"`
-		id      string `yaml:"id"`
-		version string `yaml:"version"`
+	WorkflowVersion string `yaml:"workflow_version"`
+	Version         string `yaml:"version"`
+	Name            string `yaml:"name"`
+	Description     string `yaml:"description"`
+	Platforms       []struct {
+		OS      string `yaml:"os"`
+		Arch    string `yaml:"arch"`
+		ID      string `yaml:"id"`
+		Version string `yaml:"version"`
 	} `yaml:"platforms"`
 }
 
 type runtime struct {
-	args []struct {
-		name     string `yaml:"name"`
-		pattern  string `yaml:"pattern"`
-		required bool   `yaml:"required"`
+	Args []struct {
+		Name     string `yaml:"name"`
+		Pattern  string `yaml:"pattern"`
+		Required bool   `yaml:"required"`
 	} `yaml:"args"`
 }
 
 type manifest struct {
-	metadata metadata `yaml:"metadata"`
-	runtime  runtime  `yaml:"runtime"`
+	Metadata metadata `yaml:"metadata"`
+	Runtime  runtime  `yaml:"runtime"`
 }
 
 type JSPlug struct {
@@ -98,24 +98,24 @@ func (j *JSPlug) PreflightCheck(parent env.Env, args env.Env, runCtx *run_contex
 		log.Errorf("failed to parse manifest file %s", j.pm.ManifestFile)
 		return err
 	}
-	plugArgs := j.manifest.runtime.args
+	plugArgs := j.manifest.Runtime.Args
 
 	for _, pa := range plugArgs {
-		if !args.Contains(pa.name) {
-			if pa.required {
-				return fmt.Errorf("required argument '%s' is not provided for plugin %s", pa.name, j.PluginName)
+		if !args.Contains(pa.Name) {
+			if pa.Required {
+				return fmt.Errorf("required argument '%s' is not provided for plugin %s", pa.Name, j.PluginName)
 			}
-		} else if len(pa.pattern) > 0 {
-			reg, err := regexp2.Compile(pa.pattern, regexp2.IgnoreCase)
+		} else if len(pa.Pattern) > 0 {
+			reg, err := regexp2.Compile(pa.Pattern, regexp2.IgnoreCase)
 			if err != nil {
 				return err
 			}
-			v, err := reg.MatchString(args.Get(pa.name))
+			v, err := reg.MatchString(args.Get(pa.Name))
 			if err != nil {
 				return err
 			}
 			if !v {
-				return fmt.Errorf("argument '%s' value doesn't match pattern '%s' for plugin %s", pa.name, pa.pattern, j.PluginName)
+				return fmt.Errorf("argument '%s' value doesn't match pattern '%s' for plugin %s", pa.Name, pa.Pattern, j.PluginName)
 			}
 		}
 
