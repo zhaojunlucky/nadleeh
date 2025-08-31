@@ -35,6 +35,11 @@ jobs:
           cat bbb.zz || echo "no bbb"
           echo "back dir is $PG"
           echo "=====end======="
+      - name: run bench
+        script: |
+          console.log("job future status")
+          console.log(job.futureStatus())
+          console.log("====")
 
       - name: js plugin test
         uses: js-plug@latest
