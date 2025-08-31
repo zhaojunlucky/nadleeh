@@ -73,7 +73,7 @@ func (job *Job) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *
 	ctx.JobStatus = jobStatus
 	jobStatus.Start()
 
-	jobEnv, err := InterpretEnv(&runCtx.JSCtx, parent, job.Env, ctx.GenerateMap())
+	jobEnv, err := InterpretNadEnv(&runCtx.JSCtx, parent, job.Env, ctx.GenerateMap())
 	if err != nil {
 		log.Errorf("Failed to interpret job env %v", err)
 		log.Errorf("job %s failed", job.Name)

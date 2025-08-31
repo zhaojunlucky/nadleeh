@@ -128,7 +128,7 @@ func (w *Workflow) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ct
 	workflowStatus.Start()
 	ctx.WorkflowStatus = workflowStatus
 
-	workflowEnv, err := InterpretEnv(&runCtx.JSCtx, parent, w.Env, map[string]interface{}{"arg": ctx.Args})
+	workflowEnv, err := InterpretNadEnv(&runCtx.JSCtx, parent, w.Env, map[string]interface{}{"arg": ctx.Args})
 	if err != nil {
 		log.Errorf("Failed to interpret env %v", err)
 		workflowStatus.Finish(err)

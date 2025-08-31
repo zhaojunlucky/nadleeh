@@ -112,7 +112,7 @@ func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx
 	stepStatus.Start()
 	log.Infof("start step %s", step.Name)
 
-	stepEnv, err := InterpretEnv(&runCtx.JSCtx, parent, step.Env, ctx.GenerateMap())
+	stepEnv, err := InterpretWriteOnParentEnv(&runCtx.JSCtx, parent, step.Env, ctx.GenerateMap())
 	if err != nil {
 		log.Errorf("Failed to interpret job env %v", err)
 		stepStatus.Finish(err)
