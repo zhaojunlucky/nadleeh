@@ -72,7 +72,7 @@ func createArgsMap(args []argparse.Arg, exclude []string) map[string]argparse.Ar
 
 func main() {
 	setupLog()
-	log.Infof("nadleeh %s", Version)
+	log.Infof("nadleeh %s - https://gundamz.net/nadleeh/", Version)
 
 	parser := argument.NewNadleehCliParser()
 	err := parser.Parse(os.Args)

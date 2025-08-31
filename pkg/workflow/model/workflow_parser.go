@@ -96,7 +96,7 @@ func ParseWorkflow(ymlFile io.Reader) (*Workflow, error) {
 
 		err = rawWorkflow.Jobs.Content[i+1].Decode(&job)
 		if err != nil {
-			log.Errorf("failed to parse job %s: %w", job.Name, err)
+			log.Errorf("failed to parse job %s: %v", job.Name, err)
 			return nil, fmt.Errorf("failed to parse job %s: %w", job.Name, err)
 		}
 

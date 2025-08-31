@@ -3,6 +3,8 @@ package file
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -62,4 +64,22 @@ func LogStrWithLineNo(name, str string) error {
 	}
 	fmt.Printf("======end %s file======\n", name)
 	return nil
+}
+
+func GetProjectRootDir() (string, error) {
+	cmd := exec.Command("go", "env", "GOMOD")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	// The command returns the path to go.mod. We need its parent directory.
+	goModPath := strings.TrimSpace(string(out))
+	if goModPath == "" {
+		return "", err
+	}
+
+	// Get the directory of the go.mod file.
+	projectRoot := filepath.Dir(goModPath)
+	return projectRoot, nil
 }
