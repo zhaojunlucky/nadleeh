@@ -88,7 +88,6 @@ func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx
 
 	futureStatus := ctx.JobStatus.FutureStatus()
 
-	log.Warnf("previous steps failed, check if need to run current step: %s", step.Name)
 	var ifVal bool
 	var err error
 	if step.HasIf() {
