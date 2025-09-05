@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"nadleeh/pkg/workflow/core"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -63,6 +64,7 @@ func (m *mockArg) GetRemainder() []string {
 func (m *mockArg) GetPositional() bool {
 	return false
 }
+
 
 func TestWorkflowProvider_Download(t *testing.T) {
 	t.Run("GitHubProvider", func(t *testing.T) {
@@ -161,7 +163,9 @@ func TestWorkflowProvider_DownloadGitHub(t *testing.T) {
 
 	t.Run("InvalidCredType", func(t *testing.T) {
 		provider := &workflowProvider{
-			Type: githubProvider,
+			Type:  githubProvider,
+			Owner: "testowner",
+			Name:  "testrepo",
 			Cred: workflowCred{
 				Type: "invalid",
 			},
@@ -304,8 +308,9 @@ jobs:
 		args := map[string]argparse.Arg{
 			"provider": &mockArg{value: nil, parsed: false, happened: false},
 		}
+		workflowArgs := core.NewWorkflowArgs(args)
 
-		reader, err := LoadWorkflowFile(yamlFile, args)
+		reader, err := LoadWorkflowFile(yamlFile, workflowArgs)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -343,8 +348,9 @@ jobs:
 		args := map[string]argparse.Arg{
 			"provider": &mockArg{value: &emptyProvider, parsed: true, happened: true},
 		}
+		workflowArgs := core.NewWorkflowArgs(args)
 
-		_, err := LoadWorkflowFile("test.yml", args)
+		_, err := LoadWorkflowFile("test.yml", workflowArgs)
 		if err == nil {
 			t.Error("Expected error for empty provider")
 		}
@@ -523,10 +529,11 @@ jobs:
 	args := map[string]argparse.Arg{
 		"provider": &mockArg{value: nil},
 	}
+	workflowArgs := core.NewWorkflowArgs(args)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		reader, err := LoadWorkflowFile(yamlFile, args)
+		reader, err := LoadWorkflowFile(yamlFile, workflowArgs)
 		if err != nil {
 			b.Fatalf("LoadWorkflowFile failed: %v", err)
 		}

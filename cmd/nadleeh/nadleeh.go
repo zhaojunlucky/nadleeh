@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/runner"
 
 	"github.com/akamensky/argparse"
@@ -102,11 +103,14 @@ func main() {
 		switch cmd.GetName() {
 		case "run":
 			args := createArgsEnv(cmd.GetArgs())
-			runner.RunWorkflow(createArgsMap(cmd.GetArgs(), []string{"arg"}), args)
+			runner.RunWorkflow(core.NewWorkflowArgs(createArgsMap(cmd.GetArgs(), []string{"arg"})), args)
 		case "keypair":
 			encrypt.GenerateKeyPair(cmd, createArgsMap(cmd.GetArgs(), nil))
 		case "encrypt":
 			encrypt.Encrypt(cmd, createArgsMap(cmd.GetArgs(), nil))
+		case "wf":
+			args := createArgsEnv(cmd.GetArgs())
+			runner.RunWorkflowConfig(createArgsMap(cmd.GetArgs(), []string{"arg"}), args)
 		default:
 			log.Fatalf("unknown command: %s", cmd.GetName())
 		}
@@ -125,6 +129,7 @@ func createArgsEnv(args []argparse.Arg) env.Env {
 				}
 				argMap[strings.TrimSpace(key)] = strings.TrimSpace(value)
 			}
+			break
 		}
 	}
 	argEnv := env.NewReadEnv(env.NewEmptyReadEnv(), argMap)

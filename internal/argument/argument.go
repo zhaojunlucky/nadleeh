@@ -27,8 +27,38 @@ func NewNadleehCliParser() *argparse.Parser {
 	addRunCmd(parser)
 	addEncryptCmd(parser)
 	addGenerateKeyPairCmd(parser)
+	addWorkflowCmd(parser)
 
 	return parser
+}
+
+func addWorkflowCmd(parser *argparse.Parser) {
+	runCmd := parser.NewCommand("wf", "Run the given workflow config file")
+	runCmd.StringPositional(&argparse.Options{
+		Required: true,
+		Validate: nil,
+		Help:     "Run the workflow config file",
+		Default:  nil,
+	})
+
+	re := regexp.MustCompile("^[a-zA-Z0-9_]+=\\w+$")
+
+	runCmd.StringList("a", "arg", &argparse.Options{
+		Required: false,
+		Validate: func(args []string) error {
+			if len(args) <= 0 {
+				return nil
+			}
+			for _, arg := range args {
+				if !re.MatchString(arg) {
+					return fmt.Errorf("invalid argment %s", arg)
+				}
+			}
+			return nil
+		},
+		Help:    "Arguments variables",
+		Default: nil,
+	})
 }
 
 func addRunCmd(parser *argparse.Parser) {
