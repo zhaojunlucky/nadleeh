@@ -1,34 +1,32 @@
 package runner
 
 import (
-	"nadleeh/internal/argument"
 	"nadleeh/pkg/workflow/core"
 	workflow "nadleeh/pkg/workflow/model"
 	"nadleeh/pkg/workflow/run_context"
+	"os"
 
 	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
+	"gopkg.in/yaml.v3"
 )
 
 type WorkflowRunner struct {
 }
 
-func RunWorkflow(args map[string]argparse.Arg, argEnv env.Env) {
-	yml, err := argument.GetStringFromArg(args["file"], true)
-	if err != nil {
-		log.Fatalf("failed to get yaml file arg %v", err)
-	}
-	if yml == nil {
+func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
+	if wa.File == nil || len(*wa.File) == 0 {
 		log.Fatalf("invalid -f arg")
 	}
-	log.Infof("load workflow file %s", *yml)
-	ymlFile, err := workflow.LoadWorkflowFile(*yml, args)
+	yml := *wa.File
+	log.Infof("load workflow file %s", yml)
+	ymlFile, err := workflow.LoadWorkflowFile(yml, wa)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Debugf("parse workflow file %s", *yml)
+	log.Debugf("parse workflow file %s", yml)
 	wf, err := workflow.ParseWorkflow(ymlFile)
 	if err != nil {
 		log.Fatalf("failed to parse workflow %v", err)
@@ -38,19 +36,16 @@ func RunWorkflow(args map[string]argparse.Arg, argEnv env.Env) {
 	if err = wf.Precheck(); err != nil {
 		log.Fatalf("failed to precheck workflow: %v", err)
 	}
-	pPriFile, err := argument.GetStringFromArg(args["private"], false)
 
-	runCtx := run_context.NewWorkflowRunContext(pPriFile)
+	runCtx := run_context.NewWorkflowRunContext(wa.PrivateFile)
 
 	log.Infof("preflight workflow")
 	if err = wf.PreflightCheck(env.OSEnv, argEnv, runCtx); err != nil {
 		log.Fatalf("failed to PreflightCheck workflow: %v", err)
 	}
 
-	checkArg := args["check"]
-
-	if !*checkArg.GetResult().(*bool) {
-		log.Infof("run workflow file: %s", *yml)
+	if wa.Check == nil || !*wa.Check {
+		log.Infof("run workflow file: %s", yml)
 		result := wf.Do(env.OSEnv, runCtx, &core.RunnableContext{
 			NeedOutput: false,
 			Args:       argEnv,
@@ -63,4 +58,43 @@ func RunWorkflow(args map[string]argparse.Arg, argEnv env.Env) {
 	} else {
 		log.Infof("workflow check completed")
 	}
+}
+
+func RunWorkflowConfig(argsMap map[string]argparse.Arg, args env.Env) {
+	allArgs := args.GetAll()
+	cfgFileArg := argsMap["_positionalArg_wf_1"]
+
+	if !cfgFileArg.GetParsed() {
+		log.Fatalf("invalid workflow config file arg.")
+	}
+	cfgFile := cfgFileArg.GetResult().(*string)
+	log.Infof("Loading workflow config file %s", *cfgFile)
+	file, err := os.Open(*cfgFile)
+	if err != nil {
+		log.Fatalf("failed to get the workflow config file: %v", err)
+	}
+	var workflowCfg workflow.WorkflowConfig
+	if err = yaml.NewDecoder(file).Decode(&workflowCfg); err != nil {
+		log.Fatalf("invalid config file format: %v", err)
+	}
+
+	if len(workflowCfg.Workflow) == 0 {
+		log.Fatal("workflow config file is invalid, workflow is required")
+	}
+
+	wa := &core.WorkflowArgs{
+		File: &workflowCfg.Workflow,
+	}
+	if len(workflowCfg.Provider) > 0 {
+		wa.Provider = &workflowCfg.Provider
+	}
+	if len(workflowCfg.Private) > 0 {
+		wa.PrivateFile = &workflowCfg.Private
+	}
+
+	for k, v := range workflowCfg.Args {
+		allArgs[k] = v
+	}
+
+	RunWorkflow(wa, env.NewReadEnv(env.NewEmptyRWEnv(), allArgs))
 }

@@ -6,8 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"nadleeh/internal/argument"
 	"nadleeh/pkg/file"
+	"nadleeh/pkg/workflow/core"
 	"net/http"
 	"os"
 	"os/user"
@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/akamensky/argparse"
 	"github.com/google/go-github/v74/github"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -28,6 +27,7 @@ var (
 
 	githubProvider = "github"
 	httpsProvider  = "https"
+	defaultExt     = ".yml"
 )
 
 type workflowCred struct {
@@ -38,12 +38,16 @@ type workflowCred struct {
 type workflowProvider struct {
 	Type   string       `yaml:"type"`
 	Server string       `yaml:"server"`
+	Owner  string       `yaml:"owner"`
+	Name   string       `yaml:"name"`
 	Cred   workflowCred `yaml:"cred"`
 }
 
 var defaultGitHubProvider = workflowProvider{
 	Type:   githubProvider,
 	Server: "https://github.com",
+	Owner:  "nadleehz",
+	Name:   "workflows",
 	Cred: workflowCred{
 		Type: "",
 	},
@@ -51,6 +55,7 @@ var defaultGitHubProvider = workflowProvider{
 
 func (w *workflowProvider) Download(name string) (io.Reader, error) {
 	log.Infof("download workflow file %s provided by provider %s", name, w.Type)
+
 	switch w.Type {
 	case githubProvider:
 		return w.downloadGitHub(name)
@@ -70,26 +75,33 @@ func (w *workflowProvider) downloadHTTP(name string) (io.Reader, error) {
 	return w.downloadURL(url)
 }
 
-func (w *workflowProvider) downloadGitHub(name string) (io.Reader, error) {
-	owner := "nadleehz"
-	repo := "workflows"
-	var path string
-
+func (w *workflowProvider) getOwnerRepoAndName(name string) (string, string, string, error) {
 	if strings.HasPrefix(name, "@") {
-		log.Infof("use default workflows repository %s/%s", owner, repo)
-		path = name[1:]
+		if len(w.Name) == 0 || len(w.Owner) == 0 {
+			return "", "", "", fmt.Errorf("invalid workflow file name %s, you want to use default nadleehz/workflows repo, but owner or name is not specified", name)
+		}
+		return w.Owner, w.Name, name[1:], nil
+	} else if len(w.Name) > 0 && len(w.Owner) > 0 {
+		return w.Owner, w.Name, name, nil
 	} else {
 		segs := strings.Split(name, "/")
 		if len(segs) < 3 {
-			return nil, fmt.Errorf("invalid github workflow file, it should bt <owner>/<repo>/<one or more paths>")
+			return "", "", "", fmt.Errorf("invalid github workflow file, it should bt <owner>/<repo>/<one or more paths>")
 		}
 
-		owner = segs[0]
-		repo = segs[1]
-		path = strings.Join(segs[2:], "/")
+		return segs[0], segs[1], strings.Join(segs[2:], "/"), nil
 	}
 
-	log.Infof("workflow file %s/%s/%s", owner, repo, path)
+}
+
+func (w *workflowProvider) downloadGitHub(name string) (io.Reader, error) {
+
+	owner, repo, wfPath, err := w.getOwnerRepoAndName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Infof("workflow file %s/%s/%s", owner, repo, wfPath)
 
 	if w.Cred.Type != "" && w.Cred.Type != bearer {
 		return nil, fmt.Errorf("only Bearer or empty cred type supported for github provider")
@@ -99,12 +111,12 @@ func (w *workflowProvider) downloadGitHub(name string) (io.Reader, error) {
 		client = client.WithAuthToken(w.Cred.Password)
 	}
 
-	fileContent, _, _, err := client.Repositories.GetContents(context.Background(), owner, repo, path, nil)
+	fileContent, _, _, err := client.Repositories.GetContents(context.Background(), owner, repo, wfPath, nil)
 	if err != nil {
 		return nil, err
 	}
 	if fileContent == nil {
-		return nil, fmt.Errorf("the workflow file %s is't a file path", name)
+		return nil, fmt.Errorf("the workflow file %s is't a file wfPath", name)
 	}
 	content, err := fileContent.GetContent()
 	if err != nil {
@@ -164,14 +176,14 @@ func (w *workflowProvider) addHTTPHeader(req *http.Request) error {
 	return nil
 }
 
-func LoadWorkflowFile(yml string, args map[string]argparse.Arg) (io.Reader, error) {
-
-	provider, err := argument.GetStringFromArg(args["provider"], false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse provider %v", err)
+func LoadWorkflowFile(yml string, wa *core.WorkflowArgs) (io.Reader, error) {
+	if !strings.HasSuffix(yml, defaultExt) || !strings.HasSuffix(yml, ".yaml") {
+		log.Infof("add default yaml ext .yml to workflow name")
+		yml = fmt.Sprintf("%s%s", yml, defaultExt)
 	}
-	if provider != nil {
-		if len(*provider) == 0 {
+
+	if wa.Provider != nil {
+		if len(*wa.Provider) == 0 {
 			return nil, fmt.Errorf("provider is empty")
 		}
 		currentUser, err := user.Current()
@@ -179,21 +191,21 @@ func LoadWorkflowFile(yml string, args map[string]argparse.Arg) (io.Reader, erro
 			return nil, fmt.Errorf("failed to get current user: %w", err)
 		}
 
-		providerFile := filepath.Join(currentUser.HomeDir, ".nadleeh/providers/", *provider)
+		providerFile := filepath.Join(currentUser.HomeDir, ".nadleeh/providers/", *wa.Provider)
 		log.Infof("provider file %s", providerFile)
 		val, err := file.FileExists(providerFile)
 		if err != nil {
-			log.Errorf("failed to check provider file %s", *provider)
+			log.Errorf("failed to check provider file %s", *wa.Provider)
 			return nil, err
 		}
 		var wp workflowProvider
-		if !val && *provider == githubProvider {
-			log.Infof("github provider file %s doesn't exist, use default", *provider)
+		if !val && *wa.Provider == githubProvider {
+			log.Infof("github provider file %s doesn't exist, use default", *wa.Provider)
 			wp = defaultGitHubProvider
 		} else {
 			pFile, err := os.Open(providerFile)
 			if err != nil {
-				return nil, fmt.Errorf("failed to read provider %s: %v", *provider, err)
+				return nil, fmt.Errorf("failed to read provider %s: %v", *wa.Provider, err)
 			}
 			defer pFile.Close()
 
