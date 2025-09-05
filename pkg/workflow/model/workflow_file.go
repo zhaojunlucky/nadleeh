@@ -177,7 +177,7 @@ func (w *workflowProvider) addHTTPHeader(req *http.Request) error {
 }
 
 func LoadWorkflowFile(yml string, wa *core.WorkflowArgs) (io.Reader, error) {
-	if !strings.HasSuffix(yml, defaultExt) || !strings.HasSuffix(yml, ".yaml") {
+	if !strings.HasSuffix(yml, defaultExt) && !strings.HasSuffix(yml, ".yaml") {
 		log.Infof("add default yaml ext .yml to workflow name")
 		yml = fmt.Sprintf("%s%s", yml, defaultExt)
 	}
