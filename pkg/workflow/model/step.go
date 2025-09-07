@@ -34,11 +34,7 @@ func (step *Step) Precheck() error {
 		log.Error(err)
 		return err
 	}
-
-	//if step.RequirePlugin() && !slices.Contains(plugin.SupportedPlugins, step.Uses) {
-	//	return fmt.Errorf("unsupported plugin %s in step %s", step.Uses, step.Name)
-	//}
-
+	
 	if step.HasScript() {
 		step.runner = &JSRunner{Script: step.Script, Name: step.Name}
 	} else if step.HasRun() {
