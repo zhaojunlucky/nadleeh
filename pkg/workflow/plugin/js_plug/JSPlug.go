@@ -70,6 +70,7 @@ func (j *JSPlug) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx 
 		log.Errorf("failed to interpreset plugin %s env %v", j.PluginName, err)
 		return core.NewRunnableResult(err)
 	}
+	j.Config["PLUGIN_PATH"] = j.PluginPath
 
 	plugEnv := workflow.NewWriteOnParentEnv(parent, j.Config)
 	ret, output, err := runCtx.JSCtx.RunFile(plugEnv, j.pm.MainFile, argMaps)
@@ -126,6 +127,8 @@ func (j *JSPlug) PreflightCheck(parent env.Env, args env.Env, runCtx *run_contex
 
 func (j *JSPlug) Resolve() error {
 	var err error
+	log.Debugf("plugin path: %s", j.PluginPath)
+
 	j.pm, err = PM.LoadPlugin(j.PluginName, j.Version, "", j.PluginPath)
 	if err != nil {
 		log.Errorf("failed to load plugin: %v", err)

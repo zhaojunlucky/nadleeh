@@ -5,6 +5,7 @@ import (
 	workflow "nadleeh/pkg/workflow/model"
 	"nadleeh/pkg/workflow/run_context"
 	"os"
+	"path/filepath"
 
 	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
@@ -17,10 +18,22 @@ type WorkflowRunner struct {
 
 func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 	if wa.File == nil || len(*wa.File) == 0 {
-		log.Fatalf("invalid -f arg")
+		log.Fatalf("invalid workflow file")
 	}
-	yml := *wa.File
+	yml, err := filepath.Abs(*wa.File)
+	if err != nil {
+		log.Fatalf("failed to get absolute path of workflow file: %v", err)
+	}
 	log.Infof("load workflow file %s", yml)
+	err = os.Setenv("WORKFLOW_FILE", yml)
+	if err != nil {
+		log.Fatalf("failed to set WORKFLOW_FILE env")
+	}
+	err = os.Setenv("WORKFLOW_DIR", filepath.Dir(yml))
+	if err != nil {
+		log.Fatalf("failed to set WORKFLOW_DIR env")
+	}
+
 	ymlFile, err := workflow.LoadWorkflowFile(yml, wa)
 	if err != nil {
 		log.Fatal(err)
@@ -40,13 +53,13 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 	runCtx := run_context.NewWorkflowRunContext(wa.PrivateFile)
 
 	log.Infof("preflight workflow")
-	if err = wf.PreflightCheck(env.OSEnv, argEnv, runCtx); err != nil {
+	if err = wf.PreflightCheck(env.NewOSEnv(), argEnv, runCtx); err != nil {
 		log.Fatalf("failed to PreflightCheck workflow: %v", err)
 	}
 
 	if wa.Check == nil || !*wa.Check {
 		log.Infof("run workflow file: %s", yml)
-		result := wf.Do(env.OSEnv, runCtx, &core.RunnableContext{
+		result := wf.Do(env.NewOSEnv(), runCtx, &core.RunnableContext{
 			NeedOutput: false,
 			Args:       argEnv,
 		})
