@@ -7,6 +7,7 @@ import (
 	"nadleeh/pkg/workflow/run_context"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
@@ -18,10 +19,15 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 	if wa.File == nil || len(*wa.File) == 0 {
 		log.Fatalf("invalid workflow file")
 	}
-	yml, err := filepath.Abs(*wa.File)
-	if err != nil {
-		log.Fatalf("failed to get absolute path of workflow file: %v", err)
+	yml := *wa.File
+	var err error
+	if !strings.HasPrefix(yml, "@") {
+		yml, err = filepath.Abs(*wa.File)
+		if err != nil {
+			log.Fatalf("failed to get absolute path of workflow file: %v", err)
+		}
 	}
+
 	log.Infof("load workflow file %s", yml)
 
 	common.MustSetEnvs(map[string]string{
