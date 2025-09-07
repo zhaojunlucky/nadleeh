@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"nadleeh/pkg/common"
 	"nadleeh/pkg/workflow/core"
 	workflow "nadleeh/pkg/workflow/model"
 	"nadleeh/pkg/workflow/run_context"
@@ -13,9 +14,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type WorkflowRunner struct {
-}
-
 func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 	if wa.File == nil || len(*wa.File) == 0 {
 		log.Fatalf("invalid workflow file")
@@ -25,14 +23,13 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 		log.Fatalf("failed to get absolute path of workflow file: %v", err)
 	}
 	log.Infof("load workflow file %s", yml)
-	err = os.Setenv("WORKFLOW_FILE", yml)
-	if err != nil {
-		log.Fatalf("failed to set WORKFLOW_FILE env")
-	}
-	err = os.Setenv("WORKFLOW_DIR", filepath.Dir(yml))
-	if err != nil {
-		log.Fatalf("failed to set WORKFLOW_DIR env")
-	}
+
+	common.MustSetEnvs(map[string]string{
+		"WORKFLOW_FILE":       yml,
+		"WORKFLOW_DIR":        filepath.Dir(yml),
+		"WORKFLOW_VERSION":    common.Version,
+		"WORKFLOW_BUILD_DATE": common.BuildDate,
+	})
 
 	ymlFile, err := workflow.LoadWorkflowFile(yml, wa)
 	if err != nil {

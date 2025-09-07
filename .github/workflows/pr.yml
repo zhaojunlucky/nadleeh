@@ -22,10 +22,11 @@ jobs:
       run: go test -cover ./...
     - name: Build
       run: |
+        build_date="$(date -u +'%Y-%m-%d')"
         echo "build apple m1"
-        env GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags "-X main.Version=1.0.${{ github.run_number }}" -o nadleeh_arm64 -v ./cmd/nadleeh
+        env GOOS=darwin GOARCH=arm64 go build -tags=prod -ldflags "-X nadleeh/pkg/common.Version=1.0.${{ github.run_number }} -X nadleeh/pkg/common.BuildDate=${build_date}" -o nadleeh_arm64 -v ./cmd/nadleeh
         echo "build amd64"
-        env GOOS=linux GOARCH=amd64 go build -tags=prod -ldflags "-X main.Version=1.0.${{ github.run_number }}" -o nadleeh_amd64 -v ./cmd/nadleeh
+        env GOOS=linux GOARCH=amd64 go build -tags=prod -ldflags "-X nadleeh/pkg/common.Version=1.0.${{ github.run_number }} -X nadleeh/pkg/common.BuildDate=${build_date}" -o nadleeh_amd64 -v ./cmd/nadleeh
         tar -czvf nadleeh-PR-${{ github.event.pull_request.number }}-1.0.${{ github.run_number }}.tar.gz nadleeh_amd64 nadleeh_arm64
     - uses: actions/checkout@v4
       with:

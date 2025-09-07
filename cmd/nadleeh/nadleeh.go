@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"nadleeh/pkg/common"
 	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/runner"
 
@@ -21,8 +22,6 @@ import (
 	"strings"
 	"time"
 )
-
-var Version = "1.0.1-dev"
 
 func setupLog() {
 	if runtime.GOOS == "windows" {
@@ -73,7 +72,7 @@ func createArgsMap(args []argparse.Arg, exclude []string) map[string]argparse.Ar
 
 func main() {
 	setupLog()
-	log.Infof("nadleeh %s - https://gundamz.net/nadleeh/", Version)
+	log.Infof("nadleeh %s (%s) - https://gundamz.net/nadleeh/", common.Version, common.BuildDate)
 
 	parser := argument.NewNadleehCliParser()
 	err := parser.Parse(os.Args)
