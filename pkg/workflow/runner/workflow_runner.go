@@ -2,12 +2,12 @@ package runner
 
 import (
 	"nadleeh/pkg/common"
+	"nadleeh/pkg/file"
 	"nadleeh/pkg/workflow/core"
 	workflow "nadleeh/pkg/workflow/model"
 	"nadleeh/pkg/workflow/run_context"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
@@ -20,8 +20,12 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 		log.Fatalf("invalid workflow file")
 	}
 	yml := *wa.File
-	var err error
-	if !strings.HasPrefix(yml, "@") {
+	val, err := file.FileExists(yml)
+	if err != nil {
+		log.Fatalf("failed to check workflow file existence: %v", err)
+	}
+
+	if val {
 		yml, err = filepath.Abs(*wa.File)
 		if err != nil {
 			log.Fatalf("failed to get absolute path of workflow file: %v", err)
