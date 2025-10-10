@@ -1,10 +1,8 @@
 package workflow
 
 import (
-	"errors"
 	"fmt"
 	"nadleeh/pkg/encrypt"
-	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/run_context"
 	"os"
 	"testing"
@@ -13,46 +11,6 @@ import (
 )
 
 // Mock implementations for testing
-
-// mockJob implements the Job interface for testing
-type mockJob struct {
-	name              string
-	precheckError     error
-	compileError      error
-	preflightError    error
-	doResult          *core.RunnableResult
-	shouldFailCompile bool
-	shouldFailDo      bool
-}
-
-func (m *mockJob) Precheck() error {
-	return m.precheckError
-}
-
-func (m *mockJob) Compile(ctx run_context.WorkflowRunContext) error {
-	if m.shouldFailCompile {
-		return errors.New("compile error")
-	}
-	return m.compileError
-}
-
-func (m *mockJob) PreflightCheck(parent env.Env, args env.Env, workflowRunCtx *run_context.WorkflowRunContext) error {
-	return m.preflightError
-}
-
-func (m *mockJob) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
-	if m.shouldFailDo {
-		return core.NewRunnable(errors.New("job failed"), 1, "")
-	}
-	if m.doResult != nil {
-		return m.doResult
-	}
-	return core.NewRunnableResult(nil)
-}
-
-func (m *mockJob) CanRun() bool {
-	return true
-}
 
 // mockEnv implements env.Env interface for testing
 type mockEnv struct {

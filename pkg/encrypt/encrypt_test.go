@@ -165,6 +165,7 @@ func TestEncrypt_PublicKeyHandling(t *testing.T) {
 		// Validate the public key
 		if pubKey == nil {
 			t.Error("Read public key is nil")
+			return
 		}
 		
 		if pubKey.X.Cmp(privateKey.PublicKey.X) != 0 {

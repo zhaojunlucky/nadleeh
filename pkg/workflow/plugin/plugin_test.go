@@ -2,46 +2,7 @@ package plugin
 
 import (
 	"testing"
-
-	"nadleeh/pkg/workflow/core"
-	"nadleeh/pkg/workflow/run_context"
-
-	"github.com/zhaojunlucky/golib/pkg/env"
 )
-
-// Mock plugin for testing
-type mockPlugin struct {
-	name        string
-	resolveErr  error
-	compileErr  error
-	canRun      bool
-	doResult    *core.RunnableResult
-	preflightErr error
-}
-
-func (m *mockPlugin) GetName() string {
-	return m.name
-}
-
-func (m *mockPlugin) Resolve() error {
-	return m.resolveErr
-}
-
-func (m *mockPlugin) Compile(runCtx run_context.WorkflowRunContext) error {
-	return m.compileErr
-}
-
-func (m *mockPlugin) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
-	return m.doResult
-}
-
-func (m *mockPlugin) CanRun() bool {
-	return m.canRun
-}
-
-func (m *mockPlugin) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
-	return m.preflightErr
-}
 
 func TestSupportedPlugins(t *testing.T) {
 	expectedPlugins := []string{"google-drive", "github-actions", "telegram", "minio"}

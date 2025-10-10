@@ -1,7 +1,6 @@
 package plugin
 
 import (
-	"errors"
 	"fmt"
 	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/plugin/githubaction"
@@ -62,5 +61,5 @@ func NewPlugin(name string, pluginPath string, config map[string]string) (Plugin
 	if plug != nil {
 		return plug, plug.Resolve()
 	}
-	return nil, errors.New(fmt.Sprintf("unknown plugin: %s", name))
+	return nil, fmt.Errorf("unknown plugin: %s", name)
 }

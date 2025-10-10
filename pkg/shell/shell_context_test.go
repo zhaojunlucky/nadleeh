@@ -194,6 +194,7 @@ func TestShellContext_Compile(t *testing.T) {
 		bs := ctx.scriptCache[script]
 		if bs == nil {
 			t.Error("Expected script to be cached")
+			return
 		}
 		
 		if bs.err != nil {
@@ -217,6 +218,7 @@ func TestShellContext_Compile(t *testing.T) {
 		bs := ctx.scriptCache[script]
 		if bs == nil {
 			t.Error("Expected script to be cached even with error")
+			return
 		}
 		
 		if bs.err == nil {

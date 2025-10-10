@@ -14,6 +14,7 @@ func TestNewStdOutputWriter(t *testing.T) {
 		
 		if writer == nil {
 			t.Error("Expected non-nil writer")
+			return
 		}
 		
 		// Check that the buffer is initialized
