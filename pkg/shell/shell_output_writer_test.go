@@ -116,6 +116,11 @@ func TestSdtOutputWriter_Write(t *testing.T) {
 	})
 	
 	t.Run("WriteBinaryData", func(t *testing.T) {
+		// Suppress stdout to avoid issues with binary data
+		oldStdout := os.Stdout
+		os.Stdout, _ = os.Open(os.DevNull)
+		defer func() { os.Stdout = oldStdout }()
+		
 		writer := NewStdOutputWriter()
 		testData := []byte{0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x57, 0x6f, 0x72, 0x6c, 0x64}
 		
@@ -131,6 +136,11 @@ func TestSdtOutputWriter_Write(t *testing.T) {
 	})
 	
 	t.Run("WriteLargeData", func(t *testing.T) {
+		// Suppress stdout to avoid pipe buffer deadlock with race detector
+		oldStdout := os.Stdout
+		os.Stdout, _ = os.Open(os.DevNull)
+		defer func() { os.Stdout = oldStdout }()
+		
 		writer := NewStdOutputWriter()
 		// Create a large string (1MB)
 		largeData := strings.Repeat("A", 1024*1024)
