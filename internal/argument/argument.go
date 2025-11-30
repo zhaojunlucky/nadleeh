@@ -41,7 +41,7 @@ func addWorkflowCmd(parser *argparse.Parser) {
 		Default:  nil,
 	})
 
-	re := regexp.MustCompile("^[a-zA-Z0-9_]+=\\w+$")
+	re := regexp.MustCompile(`^[a-zA-Z0-9_]+=.*$`)
 
 	runCmd.StringList("a", "arg", &argparse.Options{
 		Required: false,
@@ -84,7 +84,7 @@ func addRunCmd(parser *argparse.Parser) {
 		Default:  nil,
 	})
 
-	re := regexp.MustCompile("^[a-zA-Z0-9_]+=\\w+$")
+	re := regexp.MustCompile(`^[a-zA-Z0-9_]+=.*$`)
 
 	runCmd.StringList("a", "arg", &argparse.Options{
 		Required: false,

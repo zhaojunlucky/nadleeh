@@ -23,7 +23,6 @@ type Token struct {
 
 // JSTokenScanner scans a string and extracts tokens
 type JSTokenScanner struct {
-	input string
 }
 
 // Scan scans the input string and returns a list of tokens

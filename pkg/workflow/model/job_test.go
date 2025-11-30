@@ -61,57 +61,8 @@ func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
 }
 
-// Mock implementation of Step for Job tests
-type mockStep struct {
-	Name                string
-	precheckError       error
-	preflightCheckError error
-	compileError        error
-	doResult            *core.RunnableResult
-	precheckCalled      bool
-	preflightCheckCalled bool
-	compileCalled       bool
-	doCalled            bool
-}
-
-func (m *mockStep) Precheck() error {
-	m.precheckCalled = true
-	return m.precheckError
-}
-
-func (m *mockStep) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
-	m.preflightCheckCalled = true
-	return m.preflightCheckError
-}
-
-func (m *mockStep) Compile(ctx run_context.WorkflowRunContext) error {
-	m.compileCalled = true
-	return m.compileError
-}
-
-func (m *mockStep) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
-	m.doCalled = true
-	return m.doResult
-}
-
 // Helper function to create a test Job
 func createTestJob(name string, steps []*Step, env map[string]string) *Job {
-	return &Job{
-		Name:  name,
-		Steps: steps,
-		Env:   env,
-	}
-}
-
-// Helper function to create a test Job with mock steps
-func createTestJobWithMockSteps(name string, mockSteps []*mockStep, env map[string]string) *Job {
-	steps := make([]*Step, len(mockSteps))
-	for i, mockStep := range mockSteps {
-		steps[i] = &Step{
-			Name: mockStep.Name,
-		}
-		// We'll use the mock step for testing by replacing the step's methods
-	}
 	return &Job{
 		Name:  name,
 		Steps: steps,

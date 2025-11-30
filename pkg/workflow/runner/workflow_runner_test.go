@@ -1,17 +1,11 @@
 package runner
 
 import (
-	"bytes"
-	"io"
 	"testing"
 
 	"nadleeh/pkg/workflow/core"
-	workflow "nadleeh/pkg/workflow/model"
-	"nadleeh/pkg/workflow/run_context"
 
 	"github.com/akamensky/argparse"
-	log "github.com/sirupsen/logrus"
-	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
 // mockArg implements argparse.Arg interface for testing
@@ -116,66 +110,10 @@ func newMockEnv() *mockEnv {
 	}
 }
 
-// mockWorkflow implements the workflow interface for testing
-type mockWorkflow struct {
-	precheckErr      error
-	preflightErr     error
-	doResult         *core.RunnableResult
-	shouldPanic      bool
-	panicMessage     string
-}
-
-func (m *mockWorkflow) Precheck() error {
-	if m.shouldPanic {
-		panic(m.panicMessage)
-	}
-	return m.precheckErr
-}
-
-func (m *mockWorkflow) PreflightCheck(parent env.Env, args env.Env, runCtx *run_context.WorkflowRunContext) error {
-	if m.shouldPanic {
-		panic(m.panicMessage)
-	}
-	return m.preflightErr
-}
-
-func (m *mockWorkflow) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx *core.RunnableContext) *core.RunnableResult {
-	if m.shouldPanic {
-		panic(m.panicMessage)
-	}
-	return m.doResult
-}
-
-// Test helper to capture log output and panics
-func captureLogAndPanic(t *testing.T, testFunc func()) (logOutput string, didPanic bool, panicValue interface{}) {
-	// Capture log output
-	var buf bytes.Buffer
-	originalOutput := log.StandardLogger().Out
-	log.SetOutput(&buf)
-	defer log.SetOutput(originalOutput)
-
-	// Capture panics
-	defer func() {
-		if r := recover(); r != nil {
-			didPanic = true
-			panicValue = r
-		}
-	}()
-
-	testFunc()
-	return buf.String(), didPanic, panicValue
-}
-
-// Mock functions to replace the actual workflow functions during testing
-var (
-	mockLoadWorkflowFile func(yml string, args map[string]argparse.Arg) (io.Reader, error)
-	mockParseWorkflow    func(ymlFile io.Reader) (*workflow.Workflow, error)
-)
-
-func TestRunWorkflow(t *testing.T) {
+func TestRunWorkflow_ArgumentValidation(t *testing.T) {
 	// Note: RunWorkflow uses log.Fatalf which calls os.Exit(), making it difficult to test directly
 	// These tests focus on the components we can test and verify expected behavior patterns
-	
+
 	t.Run("ArgumentValidation", func(t *testing.T) {
 		// Test that we can create valid arguments that would be accepted by RunWorkflow
 		filename := "test.yml"

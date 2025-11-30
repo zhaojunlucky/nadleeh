@@ -398,6 +398,7 @@ func TestPluginRunner_Integration(t *testing.T) {
 		result := runner.Do(parent, &run_context.WorkflowRunContext{}, ctx)
 		if result == nil {
 			t.Error("Expected non-nil result")
+			return
 		}
 		if result.Err != nil {
 			t.Errorf("Expected no error in result, got %v", result.Err)

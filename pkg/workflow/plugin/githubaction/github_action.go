@@ -154,7 +154,7 @@ func (g *GitHubAction) initConfig(runCtx *run_context.WorkflowRunContext, env en
 		pr := env.Expand(g.Config["pr"])
 
 		if len(pr) > 0 {
-			prRegex := regexp.MustCompile("\\d+")
+			prRegex := regexp.MustCompile(`\d+`)
 			if !prRegex.MatchString(pr) {
 				return fmt.Errorf("invalid pr, should be number")
 			}
