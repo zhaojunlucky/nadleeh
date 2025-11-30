@@ -66,6 +66,7 @@ jobs:
         with:
           repository: zhaojunlucky/gh-action-script
           fetch-depth: 0
+          path: gh-action-script
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -83,6 +84,7 @@ jobs:
           WORKFLOW_ID: "pr.yml"
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        working-directory: gh-action-script
         run: |
           yarn install
           node src/release/release.mjs
