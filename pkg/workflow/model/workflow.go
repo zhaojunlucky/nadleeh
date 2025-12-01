@@ -158,9 +158,16 @@ func (w *Workflow) changeWorkingDir(workflowEnv *env.ReadWriteEnv) {
 		workflowEnv.Set("HOME", w.WorkingDir)
 		fi, err := os.Stat(w.WorkingDir)
 		if err != nil {
-			log.Fatal(err)
-		}
-		if !fi.IsDir() {
+			if os.IsNotExist(err) {
+				log.Warnf("working dir '%s' doesn't exist, create it", w.WorkingDir)
+				err = os.Mkdir(w.WorkingDir, 0755)
+				if err != nil {
+					log.Fatalf("unable to create working dir: %v", err)
+				}
+			} else {
+				log.Fatalf("error check working dir: %v", err)
+			}
+		} else if !fi.IsDir() {
 			log.Fatalf("working directory must be a directory: %s", w.WorkingDir)
 		}
 		err = os.Chdir(w.WorkingDir)
