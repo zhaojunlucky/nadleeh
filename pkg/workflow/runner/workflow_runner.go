@@ -34,12 +34,22 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 
 	log.Infof("load workflow file %s", yml)
 
-	common.MustSetEnvs(map[string]string{
+	requiredEnvs := map[string]string{
 		"WORKFLOW_FILE":       yml,
 		"WORKFLOW_DIR":        filepath.Dir(yml),
 		"WORKFLOW_VERSION":    common.Version,
 		"WORKFLOW_BUILD_DATE": common.BuildDate,
-	})
+	}
+
+	sudoHome := os.Getenv("SUDO_HOME")
+	home := os.Getenv("HOME")
+	if len(sudoHome) > 0 {
+		log.Infof("sudo home detected, override HOME=%s to HOME=%s", home, sudoHome)
+		requiredEnvs["HOME"] = sudoHome
+		requiredEnvs["USER"] = os.Getenv("SUDO_USER")
+	}
+
+	common.MustSetEnvs(requiredEnvs)
 
 	ymlFile, err := workflow.LoadWorkflowFile(yml, wa)
 	if err != nil {

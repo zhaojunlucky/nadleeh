@@ -1,0 +1,10 @@
+name: "test"
+
+working-dir: /Users/jun/Downloads
+
+jobs:
+  os-info:
+    steps:
+      - name: user
+        run: |
+          printenv

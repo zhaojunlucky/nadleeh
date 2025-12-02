@@ -186,12 +186,26 @@ func LoadWorkflowFile(yml string, wa *core.WorkflowArgs) (io.Reader, error) {
 		if len(*wa.Provider) == 0 {
 			return nil, fmt.Errorf("provider is empty")
 		}
-		currentUser, err := user.Current()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get current user: %w", err)
+
+		sudoUser := os.Getenv("SUDO_USER")
+		var homeDir string
+		if len(sudoUser) > 0 {
+			log.Infof("current sudo user is %s", sudoUser)
+			sUser, err := user.Lookup(sudoUser)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get home dir of user %s: %w", sudoUser, err)
+			}
+			homeDir = sUser.HomeDir
+		} else {
+			currentUser, err := user.Current()
+			if err != nil {
+				return nil, fmt.Errorf("failed to get current user: %w", err)
+			}
+			homeDir = currentUser.HomeDir
 		}
 
-		providerFile := filepath.Join(currentUser.HomeDir, ".nadleeh/providers/", *wa.Provider)
+		log.Infof("user directory %s", homeDir)
+		providerFile := filepath.Join(homeDir, ".nadleeh/providers/", *wa.Provider)
 		log.Infof("provider file %s", providerFile)
 		val, err := file.FileExists(providerFile)
 		if err != nil {
