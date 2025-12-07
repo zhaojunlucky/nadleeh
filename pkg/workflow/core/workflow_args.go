@@ -18,10 +18,7 @@ func NewWorkflowArgs(args map[string]argparse.Arg) *WorkflowArgs {
 
 	provider := args["provider"]
 	if provider != nil && provider.GetParsed() {
-		if useProvider := provider.GetResult().(*bool); *useProvider {
-			defaultProvider := "github"
-			wa.Provider = &defaultProvider
-		}
+		wa.Provider = provider.GetResult().(*string)
 	}
 
 	check := args["check"]

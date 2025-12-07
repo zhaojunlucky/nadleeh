@@ -70,10 +70,10 @@ func addRunCmd(parser *argparse.Parser) {
 		Default:  nil,
 	})
 
-	runCmd.Flag("p", "provider", &argparse.Options{
+	runCmd.String("p", "provider", &argparse.Options{
 		Required: false,
 		Validate: nil,
-		Help:     "Use the workflow provider (default: github)",
+		Help:     "The workflow provider (e.g., github)",
 		Default:  nil,
 	})
 
