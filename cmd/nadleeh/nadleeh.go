@@ -124,7 +124,7 @@ func createArgsEnv(args []argparse.Arg) env.Env {
 			for _, argLine := range *argList {
 				key, value, found := strings.Cut(argLine, "=")
 				if !found {
-					continue
+					argMap[strings.TrimSpace(key)] = "true"
 				}
 				argMap[strings.TrimSpace(key)] = strings.TrimSpace(value)
 			}
