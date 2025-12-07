@@ -32,7 +32,7 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 		}
 	}
 
-	log.Infof("load workflow file %s", yml)
+	log.Debugf("load workflow file %s", yml)
 
 	requiredEnvs := map[string]string{
 		"WORKFLOW_FILE":       yml,
@@ -75,7 +75,7 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 	}
 
 	if wa.Check == nil || !*wa.Check {
-		log.Infof("run workflow file: %s", yml)
+		log.Debugf("run workflow file: %s", yml)
 		result := wf.Do(env.NewOSEnv(), runCtx, &core.RunnableContext{
 			NeedOutput: false,
 			Args:       argEnv,
