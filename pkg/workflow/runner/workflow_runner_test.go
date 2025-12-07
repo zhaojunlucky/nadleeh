@@ -1,11 +1,14 @@
 package runner
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"nadleeh/pkg/workflow/core"
 
 	"github.com/akamensky/argparse"
+	"github.com/zhaojunlucky/golib/pkg/env"
 )
 
 // mockArg implements argparse.Arg interface for testing
@@ -309,6 +312,66 @@ func TestRunWorkflow_EdgeCases(t *testing.T) {
 				}
 			})
 		}
+	})
+}
+
+// TestRunWorkflow_CheckMode tests RunWorkflow with check-only mode using a real workflow file
+func TestRunWorkflow_CheckMode(t *testing.T) {
+	// Create a temporary workflow file
+	tmpDir := t.TempDir()
+	workflowFile := filepath.Join(tmpDir, "test.yml")
+	workflowContent := `name: "test"
+
+jobs:
+  test-job:
+    steps:
+      - name: echo
+        run: echo "hello"
+`
+	err := os.WriteFile(workflowFile, []byte(workflowContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create workflow file: %v", err)
+	}
+
+	t.Run("CheckOnlyMode", func(t *testing.T) {
+		checkFlag := true
+		wa := &core.WorkflowArgs{
+			File:  &workflowFile,
+			Check: &checkFlag,
+		}
+		argEnv := env.NewReadEnv(env.NewEmptyReadEnv(), map[string]string{})
+
+		// This should not panic since we're only checking
+		RunWorkflow(wa, argEnv)
+	})
+}
+
+// TestRunWorkflow_ExecuteSimple tests RunWorkflow executing a simple workflow
+func TestRunWorkflow_ExecuteSimple(t *testing.T) {
+	// Create a temporary workflow file
+	tmpDir := t.TempDir()
+	workflowFile := filepath.Join(tmpDir, "test.yml")
+	workflowContent := `name: "test"
+
+jobs:
+  test-job:
+    steps:
+      - name: echo
+        run: echo "hello"
+`
+	err := os.WriteFile(workflowFile, []byte(workflowContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create workflow file: %v", err)
+	}
+
+	t.Run("ExecuteWorkflow", func(t *testing.T) {
+		wa := &core.WorkflowArgs{
+			File: &workflowFile,
+		}
+		argEnv := env.NewReadEnv(env.NewEmptyReadEnv(), map[string]string{})
+
+		// This should execute successfully
+		RunWorkflow(wa, argEnv)
 	})
 }
 
