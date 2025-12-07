@@ -12,10 +12,10 @@ jobs:
     steps:
       - name: js
         script: |
-          console.log(arg.pr)
+          console.log(args.pr)
       - name: bash
         run: |
-          echo ${{ arg.pr }}
+          echo ${{ args.pr }}
       - name: telegram message
         if: ${{ job.failure() }}
         uses: telegram

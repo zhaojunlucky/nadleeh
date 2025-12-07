@@ -54,7 +54,7 @@ var defaultGitHubProvider = workflowProvider{
 }
 
 func (w *workflowProvider) Download(name string) (io.Reader, error) {
-	log.Infof("download workflow file %s provided by provider %s", name, w.Type)
+	log.Debugf("download workflow file %s provided by provider %s", name, w.Type)
 
 	switch w.Type {
 	case githubProvider:
@@ -178,7 +178,7 @@ func (w *workflowProvider) addHTTPHeader(req *http.Request) error {
 
 func LoadWorkflowFile(yml string, wa *core.WorkflowArgs) (io.Reader, error) {
 	if !strings.HasSuffix(yml, defaultExt) && !strings.HasSuffix(yml, ".yaml") {
-		log.Infof("add default yaml ext .yml to workflow name")
+		log.Debugf("add default yaml ext .yml to workflow name")
 		yml = fmt.Sprintf("%s%s", yml, defaultExt)
 	}
 
@@ -204,9 +204,9 @@ func LoadWorkflowFile(yml string, wa *core.WorkflowArgs) (io.Reader, error) {
 			homeDir = currentUser.HomeDir
 		}
 
-		log.Infof("user directory %s", homeDir)
+		log.Debugf("user directory %s", homeDir)
 		providerFile := filepath.Join(homeDir, ".nadleeh/providers/", *wa.Provider)
-		log.Infof("provider file %s", providerFile)
+		log.Debugf("provider file %s", providerFile)
 		val, err := file.FileExists(providerFile)
 		if err != nil {
 			log.Errorf("failed to check provider file %s", *wa.Provider)
@@ -214,7 +214,7 @@ func LoadWorkflowFile(yml string, wa *core.WorkflowArgs) (io.Reader, error) {
 		}
 		var wp workflowProvider
 		if !val && *wa.Provider == githubProvider {
-			log.Infof("github provider file %s doesn't exist, use default", *wa.Provider)
+			log.Debugf("github provider file %s doesn't exist, use default", *wa.Provider)
 			wp = defaultGitHubProvider
 		} else {
 			pFile, err := os.Open(providerFile)

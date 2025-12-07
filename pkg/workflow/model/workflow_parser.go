@@ -28,7 +28,7 @@ func parseEnv(env map[string]string, envFiles []string) (map[string]string, erro
 		env = make(map[string]string)
 	}
 	for _, envFile := range envFiles {
-		log.Infof("check env file: %s", envFile)
+		log.Debugf("check env file: %s", envFile)
 		_, err := os.Stat(envFile)
 		if os.IsNotExist(err) {
 			if !strings.HasPrefix(envFile, "/") {
@@ -45,7 +45,7 @@ func parseEnv(env map[string]string, envFiles []string) (map[string]string, erro
 		}
 		defer file.Close()
 		scanner := bufio.NewScanner(file)
-		log.Infof("parsing env file: %s", envFile)
+		log.Debugf("parsing env file: %s", envFile)
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			if len(line) == 0 || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "//") {

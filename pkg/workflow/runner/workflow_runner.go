@@ -32,7 +32,7 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 		}
 	}
 
-	log.Infof("load workflow file %s", yml)
+	log.Debugf("load workflow file %s", yml)
 
 	requiredEnvs := map[string]string{
 		"WORKFLOW_FILE":       yml,
@@ -62,20 +62,20 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 		log.Fatalf("failed to parse workflow %v", err)
 	}
 
-	log.Infof("precheck workflow")
+	log.Debugf("precheck workflow")
 	if err = wf.Precheck(); err != nil {
 		log.Fatalf("failed to precheck workflow: %v", err)
 	}
 
 	runCtx := run_context.NewWorkflowRunContext(wa.PrivateFile)
 
-	log.Infof("preflight workflow")
+	log.Debugf("preflight workflow")
 	if err = wf.PreflightCheck(env.NewOSEnv(), argEnv, runCtx); err != nil {
 		log.Fatalf("failed to PreflightCheck workflow: %v", err)
 	}
 
 	if wa.Check == nil || !*wa.Check {
-		log.Infof("run workflow file: %s", yml)
+		log.Debugf("run workflow file: %s", yml)
 		result := wf.Do(env.NewOSEnv(), runCtx, &core.RunnableContext{
 			NeedOutput: false,
 			Args:       argEnv,

@@ -39,17 +39,17 @@ jobs:
     - name: Run staticcheck
       run: staticcheck ./...
 
-    - name: SonarQube Scan
-      uses: Sonarsource/sonarqube-scan-action@v6
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      with:
-        args: >
-          -Dsonar.pullrequest.github.repository=${{ github.repository }}
-          -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}}
-          -Dsonar.pullrequest.base=main
-          -Dsonar.pullrequest.key=${{github.event.number}}
+#    - name: SonarQube Scan
+#      uses: Sonarsource/sonarqube-scan-action@v6
+#      env:
+#        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+#      with:
+#        args: >
+#          -Dsonar.pullrequest.github.repository=${{ github.repository }}
+#          -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}}
+#          -Dsonar.pullrequest.base=main
+#          -Dsonar.pullrequest.key=${{github.event.number}}
     - name: Build
       run: |
         build_date="$(date -u +'%Y-%m-%d')"

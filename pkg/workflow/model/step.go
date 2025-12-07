@@ -34,7 +34,7 @@ func (step *Step) Precheck() error {
 		log.Error(err)
 		return err
 	}
-	
+
 	if step.HasScript() {
 		step.runner = &JSRunner{Script: step.Script, Name: step.Name}
 	} else if step.HasRun() {
@@ -119,7 +119,7 @@ func (step *Step) Do(parent env.Env, runCtx *run_context.WorkflowRunContext, ctx
 		log.Errorf("step %s failed %v", step.Name, result.Err)
 		stepStatus.Finish(result.Err)
 		if step.HasContinueOnError() {
-			log.Infof("step %s failed, check continue on error", step.Name)
+			log.Debugf("step %s failed, check continue on error", step.Name)
 			value, err := step.evalContinueOnError(runCtx, stepEnv, ctx)
 			if err != nil {
 				stepStatus.Finish(err)

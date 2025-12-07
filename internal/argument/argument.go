@@ -73,7 +73,7 @@ func addRunCmd(parser *argparse.Parser) {
 	runCmd.String("p", "provider", &argparse.Options{
 		Required: false,
 		Validate: nil,
-		Help:     "The workflow provider",
+		Help:     "The workflow provider (e.g., github)",
 		Default:  nil,
 	})
 
@@ -84,7 +84,7 @@ func addRunCmd(parser *argparse.Parser) {
 		Default:  nil,
 	})
 
-	re := regexp.MustCompile(`^[a-zA-Z0-9_]+=.*$`)
+	re := regexp.MustCompile(`^[a-zA-Z0-9_]+(=.*)?$`)
 
 	runCmd.StringList("a", "arg", &argparse.Options{
 		Required: false,
