@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"nadleeh/internal/argument"
 	"nadleeh/pkg/common"
 	"nadleeh/pkg/file"
 	"nadleeh/pkg/workflow/core"
@@ -9,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
 	"gopkg.in/yaml.v3"
@@ -90,16 +90,12 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 	}
 }
 
-func RunWorkflowConfig(argsMap map[string]argparse.Arg, args env.Env) {
-	allArgs := args.GetAll()
-	cfgFileArg := argsMap["_positionalArg_wf_1"]
+func RunWorkflowConfig(wfArgs *argument.WorkflowArgs) {
+	argEnv := argument.CreateArgsEnv(wfArgs.Args)
+	allArgs := argEnv.GetAll()
 
-	if !cfgFileArg.GetParsed() {
-		log.Fatalf("invalid workflow config file arg.")
-	}
-	cfgFile := cfgFileArg.GetResult().(*string)
-	log.Infof("Loading workflow config file %s", *cfgFile)
-	file, err := os.Open(*cfgFile)
+	log.Infof("Loading workflow config file %s", wfArgs.ConfigFile)
+	file, err := os.Open(wfArgs.ConfigFile)
 	if err != nil {
 		log.Fatalf("failed to get the workflow config file: %v", err)
 	}

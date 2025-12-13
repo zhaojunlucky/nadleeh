@@ -6,9 +6,7 @@ import (
 	"nadleeh/pkg/workflow/core"
 	"nadleeh/pkg/workflow/runner"
 
-	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
-	"github.com/zhaojunlucky/golib/pkg/env"
 
 	"io"
 	"nadleeh/internal/argument"
@@ -17,13 +15,11 @@ import (
 	"os"
 	"path"
 	"runtime"
-	"slices"
 	"strconv"
-	"strings"
 	"time"
 )
 
-func setupLog() {
+func setupLog() *os.File {
 	if runtime.GOOS == "windows" {
 		log.Fatal("Windows is currently not supported.")
 	}
@@ -45,7 +41,7 @@ func setupLog() {
 	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Info("Failed to log to file, using default stderr")
-		return
+		return nil
 	}
 	log.SetReportCaller(true)
 	log.SetFormatter(&log.TextFormatter{
@@ -57,81 +53,46 @@ func setupLog() {
 	})
 	log.SetOutput(io.MultiWriter(logFile, os.Stdout))
 	log.SetLevel(log.InfoLevel)
-}
-
-func createArgsMap(args []argparse.Arg, exclude []string) map[string]argparse.Arg {
-	argsMap := make(map[string]argparse.Arg, len(args))
-	for _, arg := range args {
-		if len(exclude) > 0 && slices.Contains(exclude, arg.GetLname()) {
-			continue
-		}
-		argsMap[arg.GetLname()] = arg
-	}
-	return argsMap
+	return logFile
 }
 
 func main() {
-	setupLog()
+	if logFile := setupLog(); logFile != nil {
+		defer logFile.Close()
+	}
 	log.Infof("nadleeh %s (%s) - https://gundamz.net/nadleeh/", common.Version, common.BuildDate)
 
-	parser := argument.NewNadleehCliParser()
-	err := parser.Parse(os.Args)
-
-	if err != nil {
-		fmt.Println(parser.Usage(err))
-		return
-	}
-
-	for _, arg := range parser.GetArgs() {
-		if arg.GetLname() == "help" && arg.GetParsed() {
-			fmt.Println(parser.Usage(nil))
-			return
-		} else if arg.GetLname() == "verbose" && arg.GetParsed() {
-			val := arg.GetResult().(*bool)
-			if *val {
+	handlers := &argument.CommandHandlers{
+		RunHandler: func(args *argument.RunArgs) {
+			if argument.Verbose {
 				log.SetLevel(log.DebugLevel)
 			}
-		}
-	}
-
-	for _, cmd := range parser.GetCommands() {
-		if !cmd.Happened() {
-			log.Debugf("comand %s not specified", cmd.GetName())
-			continue
-		}
-		switch cmd.GetName() {
-		case "run":
-			args := createArgsEnv(cmd.GetArgs())
-			runner.RunWorkflow(core.NewWorkflowArgs(createArgsMap(cmd.GetArgs(), []string{"arg"})), args)
-		case "keypair":
-			encrypt.GenerateKeyPair(cmd, createArgsMap(cmd.GetArgs(), nil))
-		case "encrypt":
-			encrypt.Encrypt(cmd, createArgsMap(cmd.GetArgs(), nil))
-		case "wf":
-			args := createArgsEnv(cmd.GetArgs())
-			runner.RunWorkflowConfig(createArgsMap(cmd.GetArgs(), []string{"arg"}), args)
-		default:
-			log.Fatalf("unknown command: %s", cmd.GetName())
-		}
-	}
-}
-
-func createArgsEnv(args []argparse.Arg) env.Env {
-	argMap := make(map[string]string)
-	for _, arg := range args {
-		if arg.GetLname() == "arg" && arg.GetParsed() {
-			argList := arg.GetResult().(*[]string)
-			for _, argLine := range *argList {
-				key, value, found := strings.Cut(argLine, "=")
-				if !found {
-					argMap[strings.TrimSpace(argLine)] = "1"
-					continue
-				}
-				argMap[strings.TrimSpace(key)] = strings.TrimSpace(value)
+			log.Debug("args: ", args.Args)
+			argEnv := argument.CreateArgsEnv(args.Args)
+			runner.RunWorkflow(core.NewWorkflowArgsFromRunArgs(args), argEnv)
+		},
+		WfHandler: func(args *argument.WorkflowArgs) {
+			if argument.Verbose {
+				log.SetLevel(log.DebugLevel)
 			}
-			break
-		}
+			runner.RunWorkflowConfig(args)
+		},
+		KeypairHandler: func(args *argument.KeypairArgs) {
+			if argument.Verbose {
+				log.SetLevel(log.DebugLevel)
+			}
+			encrypt.GenerateKeyPair(args)
+		},
+		EncryptHandler: func(args *argument.EncryptArgs) {
+			if argument.Verbose {
+				log.SetLevel(log.DebugLevel)
+			}
+			encrypt.Encrypt(args)
+		},
 	}
-	argEnv := env.NewReadEnv(env.NewEmptyReadEnv(), argMap)
-	return argEnv
+
+	rootCmd := argument.NewNadleehCliParser(handlers)
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

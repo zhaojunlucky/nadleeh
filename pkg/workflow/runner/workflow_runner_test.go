@@ -5,62 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"nadleeh/internal/argument"
 	"nadleeh/pkg/workflow/core"
 
-	"github.com/akamensky/argparse"
 	"github.com/zhaojunlucky/golib/pkg/env"
 )
-
-// mockArg implements argparse.Arg interface for testing
-type mockArg struct {
-	parsed bool
-	result interface{}
-	lname  string
-}
-
-func (m *mockArg) GetParsed() bool {
-	return m.parsed
-}
-
-func (m *mockArg) GetResult() interface{} {
-	return m.result
-}
-
-func (m *mockArg) GetLname() string {
-	return m.lname
-}
-
-func (m *mockArg) GetSname() string {
-	return ""
-}
-
-func (m *mockArg) GetOpts() *argparse.Options {
-	return nil
-}
-
-func (m *mockArg) GetArgs() []argparse.Arg {
-	return nil
-}
-
-func (m *mockArg) GetCommands() []*argparse.Command {
-	return nil
-}
-
-func (m *mockArg) GetSelected() *argparse.Command {
-	return nil
-}
-
-func (m *mockArg) GetHappened() *bool {
-	return nil
-}
-
-func (m *mockArg) GetRemainder() *[]string {
-	return nil
-}
-
-func (m *mockArg) GetPositional() bool {
-	return false
-}
 
 // mockEnv implements env.Env interface for testing
 type mockEnv struct {
@@ -114,43 +63,26 @@ func newMockEnv() *mockEnv {
 }
 
 func TestRunWorkflow_ArgumentValidation(t *testing.T) {
-	// Note: RunWorkflow uses log.Fatalf which calls os.Exit(), making it difficult to test directly
-	// These tests focus on the components we can test and verify expected behavior patterns
-
 	t.Run("ArgumentValidation", func(t *testing.T) {
-		// Test that we can create valid arguments that would be accepted by RunWorkflow
-		filename := "test.yml"
-		privateFile := "private.key"
-		checkFlag := false
-
-		args := map[string]argparse.Arg{
-			"file": &mockArg{
-				parsed: true,
-				result: &filename,
-				lname:  "file",
-			},
-			"private": &mockArg{
-				parsed: true,
-				result: &privateFile,
-				lname:  "private",
-			},
-			"check": &mockArg{
-				parsed: true,
-				result: &checkFlag,
-				lname:  "check",
-			},
+		// Test that we can create valid RunArgs that would be accepted by RunWorkflow
+		runArgs := &argument.RunArgs{
+			File:        "test.yml",
+			Provider:    "",
+			Check:       false,
+			Args:        nil,
+			PrivateFile: "private.key",
 		}
 
 		// Verify argument structure is correct
-		if args["file"].GetResult().(*string) == nil || *args["file"].GetResult().(*string) != "test.yml" {
+		if runArgs.File != "test.yml" {
 			t.Error("File argument not properly structured")
 		}
 
-		if args["private"].GetResult().(*string) == nil || *args["private"].GetResult().(*string) != "private.key" {
+		if runArgs.PrivateFile != "private.key" {
 			t.Error("Private argument not properly structured")
 		}
 
-		if args["check"].GetResult().(*bool) == nil || *args["check"].GetResult().(*bool) != false {
+		if runArgs.Check != false {
 			t.Error("Check argument not properly structured")
 		}
 	})
@@ -175,105 +107,76 @@ func TestRunWorkflow_ArgumentValidation(t *testing.T) {
 		}
 	})
 
-	t.Run("MockArgInterface", func(t *testing.T) {
-		// Test that our mockArg properly implements the argparse.Arg interface
-		arg := &mockArg{
-			parsed: true,
-			result: "test_value",
-			lname:  "test_arg",
+	t.Run("RunArgsToWorkflowArgs", func(t *testing.T) {
+		// Test that RunArgs can be converted to WorkflowArgs correctly
+		runArgs := &argument.RunArgs{
+			File:        "test.yml",
+			Provider:    "github",
+			Check:       true,
+			Args:        []string{"key=value"},
+			PrivateFile: "private.key",
 		}
 
-		if !arg.GetParsed() {
-			t.Error("Expected argument to be parsed")
+		wa := core.NewWorkflowArgsFromRunArgs(runArgs)
+
+		if wa.File == nil || *wa.File != "test.yml" {
+			t.Error("File not properly converted")
 		}
 
-		if arg.GetResult().(string) != "test_value" {
-			t.Error("Expected result to be 'test_value'")
+		if wa.Provider == nil || *wa.Provider != "github" {
+			t.Error("Provider not properly converted")
 		}
 
-		if arg.GetLname() != "test_arg" {
-			t.Error("Expected lname to be 'test_arg'")
+		if wa.Check == nil || *wa.Check != true {
+			t.Error("Check not properly converted")
 		}
 
-		// Test other interface methods don't panic
-		_ = arg.GetSname()
-		_ = arg.GetOpts()
-		_ = arg.GetArgs()
-		_ = arg.GetCommands()
-		_ = arg.GetSelected()
-		_ = arg.GetHappened()
-		_ = arg.GetRemainder()
-		_ = arg.GetPositional()
+		if wa.PrivateFile == nil || *wa.PrivateFile != "private.key" {
+			t.Error("PrivateFile not properly converted")
+		}
 	})
 }
 
 func TestRunWorkflow_ArgumentParsing(t *testing.T) {
 	t.Run("ValidArguments", func(t *testing.T) {
-		filename := "test.yml"
-		privateFile := "private.key"
-		checkFlag := false
-
-		args := map[string]argparse.Arg{
-			"file": &mockArg{
-				parsed: true,
-				result: &filename,
-				lname:  "file",
-			},
-			"private": &mockArg{
-				parsed: true,
-				result: &privateFile,
-				lname:  "private",
-			},
-			"check": &mockArg{
-				parsed: true,
-				result: &checkFlag,
-				lname:  "check",
-			},
+		runArgs := &argument.RunArgs{
+			File:        "test.yml",
+			Provider:    "",
+			Check:       false,
+			Args:        nil,
+			PrivateFile: "private.key",
 		}
 
-		// Test that arguments are parsed correctly
-		fileArg, err := args["file"].GetResult().(*string), error(nil)
-		if err != nil || fileArg == nil || *fileArg != "test.yml" {
-			t.Errorf("Expected file argument to be 'test.yml', got: %v", fileArg)
+		// Test that arguments are structured correctly
+		if runArgs.File != "test.yml" {
+			t.Errorf("Expected file argument to be 'test.yml', got: %v", runArgs.File)
 		}
 
-		privateArg := args["private"].GetResult().(*string)
-		if privateArg == nil || *privateArg != "private.key" {
-			t.Errorf("Expected private argument to be 'private.key', got: %v", privateArg)
+		if runArgs.PrivateFile != "private.key" {
+			t.Errorf("Expected private argument to be 'private.key', got: %v", runArgs.PrivateFile)
 		}
 
-		checkArg := args["check"].GetResult().(*bool)
-		if checkArg == nil || *checkArg != false {
-			t.Errorf("Expected check argument to be false, got: %v", checkArg)
+		if runArgs.Check != false {
+			t.Errorf("Expected check argument to be false, got: %v", runArgs.Check)
 		}
 	})
 
 	t.Run("OptionalPrivateArgNotProvided", func(t *testing.T) {
-		args := map[string]argparse.Arg{
-			"private": &mockArg{
-				parsed: false,
-				lname:  "private",
-			},
+		runArgs := &argument.RunArgs{
+			File:        "test.yml",
+			PrivateFile: "",
 		}
 
-		// This should not cause an error since private is optional
-		privateArg := args["private"]
-		if privateArg.GetParsed() {
-			t.Error("Expected private argument to not be parsed")
+		// Empty private file should be valid
+		if runArgs.PrivateFile != "" {
+			t.Error("Expected private argument to be empty")
 		}
 	})
 }
 
 func TestRunWorkflow_EdgeCases(t *testing.T) {
 	t.Run("EmptyArgsMap", func(t *testing.T) {
-		// Test with empty args map - would cause log.Fatal which cannot be caught
-		// Skipping this test since log.Fatal calls os.Exit() and terminates the process
-		t.Skip("Skipping test that would trigger log.Fatal for missing file argument")
-	})
-
-	t.Run("NilArgsMap", func(t *testing.T) {
-		// Test with nil args map - would cause log.Fatal which cannot be caught
-		// Skipping this test since log.Fatal calls os.Exit() and terminates the process
+		// Test with empty args - would cause log.Fatal which cannot be caught
 		t.Skip("Skipping test that would trigger log.Fatal for missing file argument")
 	})
 
@@ -282,33 +185,22 @@ func TestRunWorkflow_EdgeCases(t *testing.T) {
 		testCases := []struct {
 			name     string
 			filename string
-			parsed   bool
 			expectOk bool
 		}{
-			{"ValidFile", "test.yml", true, true},
-			{"EmptyFile", "", true, false},
-			{"UnparsedFile", "test.yml", false, false},
+			{"ValidFile", "test.yml", true},
+			{"EmptyFile", "", false},
 		}
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				arg := &mockArg{
-					parsed: tc.parsed,
-					result: &tc.filename,
-					lname:  "file",
+				runArgs := &argument.RunArgs{
+					File: tc.filename,
 				}
 
-				if arg.GetParsed() != tc.parsed {
-					t.Errorf("Expected parsed=%v, got %v", tc.parsed, arg.GetParsed())
-				}
-
-				if tc.parsed && arg.GetResult().(*string) != nil {
-					result := *arg.GetResult().(*string)
-					if (result != "" && tc.expectOk) || (result == "" && !tc.expectOk) {
-						// This is expected behavior
-					} else {
-						t.Errorf("Unexpected result for %s: %s", tc.name, result)
-					}
+				if (runArgs.File != "" && tc.expectOk) || (runArgs.File == "" && !tc.expectOk) {
+					// This is expected behavior
+				} else {
+					t.Errorf("Unexpected result for %s: %s", tc.name, runArgs.File)
 				}
 			})
 		}
@@ -377,39 +269,17 @@ jobs:
 
 // Benchmark tests
 func BenchmarkRunWorkflow_ArgumentParsing(b *testing.B) {
-	filename := "test.yml"
-	privateFile := "private.key"
-	checkFlag := true
-
-	args := map[string]argparse.Arg{
-		"file": &mockArg{
-			parsed: true,
-			result: &filename,
-			lname:  "file",
-		},
-		"private": &mockArg{
-			parsed: true,
-			result: &privateFile,
-			lname:  "private",
-		},
-		"check": &mockArg{
-			parsed: true,
-			result: &checkFlag,
-			lname:  "check",
-		},
+	runArgs := &argument.RunArgs{
+		File:        "test.yml",
+		Provider:    "",
+		Check:       true,
+		Args:        nil,
+		PrivateFile: "private.key",
 	}
-	mockEnv := newMockEnv()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// We can only benchmark the argument parsing part since the full function
-		// will panic due to file system dependencies
-		func() {
-			defer func() {
-				recover() // Ignore panics for benchmarking
-			}()
-			workflowArgs := core.NewWorkflowArgs(args)
-			RunWorkflow(workflowArgs, mockEnv)
-		}()
+		// Benchmark the argument conversion
+		_ = core.NewWorkflowArgsFromRunArgs(runArgs)
 	}
 }

@@ -10,60 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/akamensky/argparse"
 )
-
-// Mock argparse.Arg for testing
-type mockArg struct {
-	value   interface{}
-	parsed  bool
-	happened bool
-}
-
-func (m *mockArg) GetParsed() bool {
-	return m.parsed
-}
-
-func (m *mockArg) GetResult() interface{} {
-	return m.value
-}
-
-func (m *mockArg) GetLname() string {
-	return "test"
-}
-
-func (m *mockArg) GetSname() string {
-	return "t"
-}
-
-func (m *mockArg) GetOpts() *argparse.Options {
-	return nil
-}
-
-func (m *mockArg) GetArgs() []argparse.Arg {
-	return nil
-}
-
-func (m *mockArg) GetCommands() []*argparse.Command {
-	return nil
-}
-
-func (m *mockArg) GetSelected() *argparse.Command {
-	return nil
-}
-
-func (m *mockArg) GetHappened() bool {
-	return m.happened
-}
-
-func (m *mockArg) GetRemainder() []string {
-	return nil
-}
-
-func (m *mockArg) GetPositional() bool {
-	return false
-}
 
 
 func TestWorkflowProvider_Download(t *testing.T) {
@@ -305,10 +252,7 @@ jobs:
 			t.Fatalf("Failed to create test YAML file: %v", err)
 		}
 
-		args := map[string]argparse.Arg{
-			"provider": &mockArg{value: nil, parsed: false, happened: false},
-		}
-		workflowArgs := core.NewWorkflowArgs(args)
+		workflowArgs := &core.WorkflowArgs{}
 
 		reader, err := LoadWorkflowFile(yamlFile, workflowArgs)
 		if err != nil {
@@ -345,10 +289,9 @@ jobs:
 
 	t.Run("WithProvider_EmptyProvider", func(t *testing.T) {
 		emptyProvider := ""
-		args := map[string]argparse.Arg{
-			"provider": &mockArg{value: &emptyProvider, parsed: true, happened: true},
+		workflowArgs := &core.WorkflowArgs{
+			Provider: &emptyProvider,
 		}
-		workflowArgs := core.NewWorkflowArgs(args)
 
 		_, err := LoadWorkflowFile("test.yml", workflowArgs)
 		if err == nil {
@@ -526,10 +469,7 @@ jobs:
 		b.Fatalf("Failed to create test YAML file: %v", err)
 	}
 
-	args := map[string]argparse.Arg{
-		"provider": &mockArg{value: nil},
-	}
-	workflowArgs := core.NewWorkflowArgs(args)
+	workflowArgs := &core.WorkflowArgs{}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

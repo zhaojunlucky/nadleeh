@@ -13,114 +13,34 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/akamensky/argparse"
 	"github.com/zhaojunlucky/golib/pkg/security"
 )
 
-// mockEncryptArg implements argparse.Arg interface for testing
-type mockEncryptArg struct {
-	parsed bool
-	result interface{}
-	lname  string
-}
-
-func (m *mockEncryptArg) GetParsed() bool {
-	return m.parsed
-}
-
-func (m *mockEncryptArg) GetResult() interface{} {
-	return m.result
-}
-
-func (m *mockEncryptArg) GetLname() string {
-	return m.lname
-}
-
-func (m *mockEncryptArg) GetSname() string {
-	return ""
-}
-
-func (m *mockEncryptArg) GetOpts() *argparse.Options {
-	return nil
-}
-
-func (m *mockEncryptArg) GetArgs() []argparse.Arg {
-	return nil
-}
-
-func (m *mockEncryptArg) GetCommands() []*argparse.Command {
-	return nil
-}
-
-func (m *mockEncryptArg) GetSelected() *argparse.Command {
-	return nil
-}
-
-func (m *mockEncryptArg) GetHappened() *bool {
-	return nil
-}
-
-func (m *mockEncryptArg) GetRemainder() *[]string {
-	return nil
-}
-
-func (m *mockEncryptArg) GetPositional() bool {
-	return false
-}
-
-// createMockEncryptArgsMap creates a mock arguments map for testing
-func createMockEncryptArgsMap(publicKeyPath string, filePath, str string, fileParsed, strParsed bool) map[string]argparse.Arg {
-	return map[string]argparse.Arg{
-		"public": &mockEncryptArg{
-			parsed: true,
-			result: &publicKeyPath,
-			lname:  "public",
-		},
-		"file": &mockEncryptArg{
-			parsed: fileParsed,
-			result: filePath,
-			lname:  "file",
-		},
-		"str": &mockEncryptArg{
-			parsed: strParsed,
-			result: &str,
-			lname:  "str",
-		},
+// createEncryptArgs creates EncryptArgs for testing
+func createEncryptArgs(publicKeyPath, filePath, str string) *argument.EncryptArgs {
+	return &argument.EncryptArgs{
+		Public: publicKeyPath,
+		File:   filePath,
+		Str:    str,
 	}
 }
 
 func TestEncrypt_ArgumentValidation(t *testing.T) {
 	t.Run("MissingPublicKeyArgument", func(t *testing.T) {
-		// Test the underlying argument function since Encrypt would call log.Fatal
-		argsMap := map[string]argparse.Arg{
-			"public": &mockEncryptArg{
-				parsed: false,
-				result: nil,
-				lname:  "public",
-			},
-		}
+		// Test that empty public key would be invalid
+		args := createEncryptArgs("", "", "")
 		
-		_, err := argument.GetStringFromArg(argsMap["public"], true)
-		if err == nil {
-			t.Error("Expected error when public key argument is not provided")
-		}
-		
-		if !strings.Contains(err.Error(), "public") {
-			t.Error("Expected error message to mention 'public'")
+		if args.Public != "" {
+			t.Error("Expected empty public key")
 		}
 	})
 	
 	t.Run("ValidPublicKeyArgument", func(t *testing.T) {
 		publicKeyPath := "/tmp/test-public.pem"
-		argsMap := createMockEncryptArgsMap(publicKeyPath, "", "", false, false)
+		args := createEncryptArgs(publicKeyPath, "", "")
 		
-		pPub, err := argument.GetStringFromArg(argsMap["public"], true)
-		if err != nil {
-			t.Errorf("Expected no error for valid public key argument, got: %v", err)
-		}
-		
-		if pPub == nil || *pPub != publicKeyPath {
-			t.Errorf("Expected public key path '%s', got: %v", publicKeyPath, pPub)
+		if args.Public != publicKeyPath {
+			t.Errorf("Expected public key path '%s', got: %v", publicKeyPath, args.Public)
 		}
 	})
 }
@@ -223,16 +143,11 @@ func TestEncrypt_FileEncryption(t *testing.T) {
 			t.Fatalf("Failed to create test file: %v", err)
 		}
 		
-		// Test the file encryption workflow components
-		argsMap := createMockEncryptArgsMap(pubKeyFile, testFile, "", true, false)
+		// Test the file encryption workflow components using EncryptArgs
+		args := createEncryptArgs(pubKeyFile, testFile, "")
 		
 		// Test public key reading
-		pPub, err := argument.GetStringFromArg(argsMap["public"], true)
-		if err != nil {
-			t.Fatalf("Failed to get public key argument: %v", err)
-		}
-		
-		reader, err := os.Open(*pPub)
+		reader, err := os.Open(args.Public)
 		if err != nil {
 			t.Fatalf("Failed to open public key file: %v", err)
 		}
@@ -243,19 +158,13 @@ func TestEncrypt_FileEncryption(t *testing.T) {
 			t.Fatalf("Failed to read public key: %v", err)
 		}
 		
-		// Test file argument parsing
-		pFileArg := argsMap["file"]
-		if !pFileArg.GetParsed() {
-			t.Error("Expected file argument to be parsed")
-		}
-		
-		filePath := pFileArg.GetResult().(string)
-		if filePath != testFile {
-			t.Errorf("Expected file path '%s', got '%s'", testFile, filePath)
+		// Test file argument
+		if args.File != testFile {
+			t.Errorf("Expected file path '%s', got '%s'", testFile, args.File)
 		}
 		
 		// Test file reading
-		file, err := os.Open(filePath)
+		file, err := os.Open(args.File)
 		if err != nil {
 			t.Fatalf("Failed to open test file: %v", err)
 		}
@@ -279,8 +188,8 @@ func TestEncrypt_FileEncryption(t *testing.T) {
 		}
 		
 		// Test output file path generation
-		expectedOutputPath := filepath.Join(filepath.Dir(filePath), 
-			fmt.Sprintf("%s-encrypted%s", filepath.Base(filePath), filepath.Ext(filePath)))
+		expectedOutputPath := filepath.Join(filepath.Dir(args.File), 
+			fmt.Sprintf("%s-encrypted%s", filepath.Base(args.File), filepath.Ext(args.File)))
 		
 		expectedPath := filepath.Join(tempDir, "test.txt-encrypted.txt")
 		if expectedOutputPath != expectedPath {
@@ -352,17 +261,12 @@ func TestEncrypt_StringEncryption(t *testing.T) {
 			t.Fatalf("Failed to write public key: %v", err)
 		}
 		
-		// Test string encryption workflow components
+		// Test string encryption workflow components using EncryptArgs
 		testString := "  Hello, World!  "
-		argsMap := createMockEncryptArgsMap(pubKeyFile, "", testString, false, true)
+		args := createEncryptArgs(pubKeyFile, "", testString)
 		
-		// Test public key reading (same as file encryption)
-		pPub, err := argument.GetStringFromArg(argsMap["public"], true)
-		if err != nil {
-			t.Fatalf("Failed to get public key argument: %v", err)
-		}
-		
-		reader, err := os.Open(*pPub)
+		// Test public key reading
+		reader, err := os.Open(args.Public)
 		if err != nil {
 			t.Fatalf("Failed to open public key file: %v", err)
 		}
@@ -373,14 +277,8 @@ func TestEncrypt_StringEncryption(t *testing.T) {
 			t.Fatalf("Failed to read public key: %v", err)
 		}
 		
-		// Test string argument parsing
-		pStr := argsMap["str"]
-		if !pStr.GetParsed() {
-			t.Error("Expected string argument to be parsed")
-		}
-		
-		pStrResult := pStr.GetResult().(*string)
-		str := strings.TrimSpace(*pStrResult)
+		// Test string argument
+		str := strings.TrimSpace(args.Str)
 		
 		expectedTrimmed := "Hello, World!"
 		if str != expectedTrimmed {
@@ -441,37 +339,30 @@ func TestEncrypt_StringEncryption(t *testing.T) {
 }
 
 func TestEncrypt_ArgumentParsing(t *testing.T) {
-	t.Run("BothFileAndStringParsed", func(t *testing.T) {
+	t.Run("BothFileAndStringProvided", func(t *testing.T) {
 		// Test the precedence - file should be processed first
-		argsMap := createMockEncryptArgsMap("/tmp/public.pem", "/tmp/file.txt", "test string", true, true)
+		args := createEncryptArgs("/tmp/public.pem", "/tmp/file.txt", "test string")
 		
-		pFileArg := argsMap["file"]
-		pStrArg := argsMap["str"]
-		
-		if !pFileArg.GetParsed() {
-			t.Error("Expected file argument to be parsed")
+		if args.File == "" {
+			t.Error("Expected file argument to be set")
 		}
 		
-		if !pStrArg.GetParsed() {
-			t.Error("Expected string argument to be parsed")
+		if args.Str == "" {
+			t.Error("Expected string argument to be set")
 		}
 		
 		// In the actual Encrypt function, file takes precedence over string
-		// This test verifies the argument parsing logic
 	})
 	
-	t.Run("NeitherFileNorStringParsed", func(t *testing.T) {
-		argsMap := createMockEncryptArgsMap("/tmp/public.pem", "", "", false, false)
+	t.Run("NeitherFileNorStringProvided", func(t *testing.T) {
+		args := createEncryptArgs("/tmp/public.pem", "", "")
 		
-		pFileArg := argsMap["file"]
-		pStrArg := argsMap["str"]
-		
-		if pFileArg.GetParsed() {
-			t.Error("Expected file argument to not be parsed")
+		if args.File != "" {
+			t.Error("Expected file argument to be empty")
 		}
 		
-		if pStrArg.GetParsed() {
-			t.Error("Expected string argument to not be parsed")
+		if args.Str != "" {
+			t.Error("Expected string argument to be empty")
 		}
 		
 		// This would trigger the "invalid argument for decrypt" error in the actual function
@@ -561,13 +452,9 @@ func TestEncrypt_ErrorHandling(t *testing.T) {
 
 // Benchmark tests
 func BenchmarkEncrypt_ArgumentParsing(b *testing.B) {
-	argsMap := createMockEncryptArgsMap("/tmp/public.pem", "/tmp/file.txt", "test string", true, false)
-	
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = argument.GetStringFromArg(argsMap["public"], true)
-		_ = argsMap["file"].GetParsed()
-		_ = argsMap["str"].GetParsed()
+		_ = createEncryptArgs("/tmp/public.pem", "/tmp/file.txt", "test string")
 	}
 }
 

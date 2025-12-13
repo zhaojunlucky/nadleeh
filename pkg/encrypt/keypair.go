@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"nadleeh/internal/argument"
 
-	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/security"
 
@@ -12,25 +11,14 @@ import (
 	"path"
 )
 
-func GenerateKeyPair(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
-
-	pName, err := argument.GetStringFromArg(argsMap["name"], true)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	pDir, err := argument.GetStringFromArg(argsMap["dir"], true)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func GenerateKeyPair(args *argument.KeypairArgs) {
 	pri, err := security.GenerateECKeyPair("secp256r1")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	priFile := path.Join(*pDir, fmt.Sprintf("%s-private.pem", *pName))
-	pubFile := path.Join(*pDir, fmt.Sprintf("%s-public.pem", *pName))
+	priFile := path.Join(args.Dir, fmt.Sprintf("%s-private.pem", args.Name))
+	pubFile := path.Join(args.Dir, fmt.Sprintf("%s-public.pem", args.Name))
 
 	log.Infof("Saving public key %s", pubFile)
 
