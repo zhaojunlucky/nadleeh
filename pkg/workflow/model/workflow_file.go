@@ -123,6 +123,9 @@ func (w *workflowProvider) downloadGitHub(name string) (io.Reader, error) {
 		log.Fatalf("error decoding content: %v", err)
 		return nil, err
 	}
+	sha := fileContent.SHA
+	log.Debugf("workflow file sha: %s", *sha)
+
 	return strings.NewReader(content), nil
 }
 
