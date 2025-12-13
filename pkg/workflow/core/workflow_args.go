@@ -1,6 +1,6 @@
 package core
 
-import "github.com/akamensky/argparse"
+import "nadleeh/internal/argument"
 
 type WorkflowArgs struct {
 	File        *string
@@ -9,21 +9,22 @@ type WorkflowArgs struct {
 	PrivateFile *string
 }
 
-func NewWorkflowArgs(args map[string]argparse.Arg) *WorkflowArgs {
+// NewWorkflowArgsFromRunArgs creates WorkflowArgs from cobra RunArgs
+func NewWorkflowArgsFromRunArgs(args *argument.RunArgs) *WorkflowArgs {
 	wa := &WorkflowArgs{}
-	file := args["file"]
-	if file != nil && file.GetParsed() {
-		wa.File = file.GetResult().(*string)
+
+	if args.File != "" {
+		wa.File = &args.File
 	}
 
-	provider := args["provider"]
-	if provider != nil && provider.GetParsed() {
-		wa.Provider = provider.GetResult().(*string)
+	if args.Provider != "" {
+		wa.Provider = &args.Provider
 	}
 
-	check := args["check"]
-	if check != nil && check.GetParsed() {
-		wa.Check = check.GetResult().(*bool)
+	wa.Check = &args.Check
+
+	if args.PrivateFile != "" {
+		wa.PrivateFile = &args.PrivateFile
 	}
 
 	return wa

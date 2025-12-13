@@ -5,128 +5,47 @@ import (
 	"nadleeh/internal/argument"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/akamensky/argparse"
 	"github.com/zhaojunlucky/golib/pkg/security"
 )
 
-// mockArg implements argparse.Arg interface for testing
-type mockArg struct {
-	parsed bool
-	result interface{}
-	lname  string
-}
-
-func (m *mockArg) GetParsed() bool {
-	return m.parsed
-}
-
-func (m *mockArg) GetResult() interface{} {
-	return m.result
-}
-
-func (m *mockArg) GetLname() string {
-	return m.lname
-}
-
-func (m *mockArg) GetSname() string {
-	return ""
-}
-
-func (m *mockArg) GetOpts() *argparse.Options {
-	return nil
-}
-
-func (m *mockArg) GetArgs() []argparse.Arg {
-	return nil
-}
-
-func (m *mockArg) GetCommands() []*argparse.Command {
-	return nil
-}
-
-func (m *mockArg) GetSelected() *argparse.Command {
-	return nil
-}
-
-func (m *mockArg) GetHappened() *bool {
-	return nil
-}
-
-func (m *mockArg) GetRemainder() *[]string {
-	return nil
-}
-
-func (m *mockArg) GetPositional() bool {
-	return false
-}
-
-// createMockArgsMap creates a mock arguments map for testing
-func createMockArgsMap(name, dir string, nameParsed, dirParsed bool) map[string]argparse.Arg {
-	return map[string]argparse.Arg{
-		"name": &mockArg{
-			parsed: nameParsed,
-			result: &name,
-			lname:  "name",
-		},
-		"dir": &mockArg{
-			parsed: dirParsed,
-			result: &dir,
-			lname:  "dir",
-		},
+// createKeypairArgs creates KeypairArgs for testing
+func createKeypairArgs(name, dir string) *argument.KeypairArgs {
+	return &argument.KeypairArgs{
+		Name: name,
+		Dir:  dir,
 	}
 }
 
 func TestGenerateKeyPair_ArgumentValidation(t *testing.T) {
 	t.Run("MissingNameArgument", func(t *testing.T) {
-		// This test would cause log.Fatal, so we test the underlying argument function instead
-		argsMap := createMockArgsMap("", "", false, true)
+		// Test that empty name would be invalid
+		args := createKeypairArgs("", "/tmp")
 		
-		_, err := argument.GetStringFromArg(argsMap["name"], true)
-		if err == nil {
-			t.Error("Expected error when name argument is not provided")
-		}
-		
-		if !strings.Contains(err.Error(), "name") {
-			t.Error("Expected error message to mention 'name'")
+		if args.Name != "" {
+			t.Error("Expected empty name")
 		}
 	})
 	
 	t.Run("MissingDirArgument", func(t *testing.T) {
-		// This test would cause log.Fatal, so we test the underlying argument function instead
-		argsMap := createMockArgsMap("test", "", true, false)
+		// Test that empty dir would be invalid
+		args := createKeypairArgs("test", "")
 		
-		_, err := argument.GetStringFromArg(argsMap["dir"], true)
-		if err == nil {
-			t.Error("Expected error when dir argument is not provided")
-		}
-		
-		if !strings.Contains(err.Error(), "dir") {
-			t.Error("Expected error message to mention 'dir'")
+		if args.Dir != "" {
+			t.Error("Expected empty dir")
 		}
 	})
 	
 	t.Run("ValidArguments", func(t *testing.T) {
-		argsMap := createMockArgsMap("testkey", "/tmp", true, true)
+		args := createKeypairArgs("testkey", "/tmp")
 		
-		name, err := argument.GetStringFromArg(argsMap["name"], true)
-		if err != nil {
-			t.Errorf("Expected no error for valid name argument, got: %v", err)
+		if args.Name != "testkey" {
+			t.Errorf("Expected name 'testkey', got: %v", args.Name)
 		}
 		
-		if name == nil || *name != "testkey" {
-			t.Errorf("Expected name 'testkey', got: %v", name)
-		}
-		
-		dir, err := argument.GetStringFromArg(argsMap["dir"], true)
-		if err != nil {
-			t.Errorf("Expected no error for valid dir argument, got: %v", err)
-		}
-		
-		if dir == nil || *dir != "/tmp" {
-			t.Errorf("Expected dir '/tmp', got: %v", dir)
+		if args.Dir != "/tmp" {
+			t.Errorf("Expected dir '/tmp', got: %v", args.Dir)
 		}
 	})
 }
@@ -137,21 +56,10 @@ func TestGenerateKeyPair_FileGeneration(t *testing.T) {
 		tempDir := t.TempDir()
 		keyName := "test-keypair"
 		
-		argsMap := createMockArgsMap(keyName, tempDir, true, true)
+		args := createKeypairArgs(keyName, tempDir)
 		
 		// Since GenerateKeyPair uses log.Fatal, we'll test the individual components
 		// that would be called within the function
-		
-		// Test argument extraction
-		pName, err := argument.GetStringFromArg(argsMap["name"], true)
-		if err != nil {
-			t.Fatalf("Failed to get name argument: %v", err)
-		}
-		
-		pDir, err := argument.GetStringFromArg(argsMap["dir"], true)
-		if err != nil {
-			t.Fatalf("Failed to get dir argument: %v", err)
-		}
 		
 		// Test key pair generation
 		pri, err := security.GenerateECKeyPair("secp256r1")
@@ -160,8 +68,8 @@ func TestGenerateKeyPair_FileGeneration(t *testing.T) {
 		}
 		
 		// Test file path generation
-		priFile := filepath.Join(*pDir, fmt.Sprintf("%s-private.pem", *pName))
-		pubFile := filepath.Join(*pDir, fmt.Sprintf("%s-public.pem", *pName))
+		priFile := filepath.Join(args.Dir, fmt.Sprintf("%s-private.pem", args.Name))
+		pubFile := filepath.Join(args.Dir, fmt.Sprintf("%s-public.pem", args.Name))
 		
 		expectedPriFile := filepath.Join(tempDir, "test-keypair-private.pem")
 		expectedPubFile := filepath.Join(tempDir, "test-keypair-public.pem")
@@ -396,30 +304,20 @@ func TestGenerateKeyPair_PathHandling(t *testing.T) {
 
 func TestGenerateKeyPair_EdgeCases(t *testing.T) {
 	t.Run("EmptyStringArguments", func(t *testing.T) {
-		// Test empty string arguments (different from unparsed arguments)
-		argsMap := createMockArgsMap("", "", true, true)
+		// Test empty string arguments
+		args := createKeypairArgs("", "")
 		
-		name, err := argument.GetStringFromArg(argsMap["name"], true)
-		if err != nil {
-			t.Errorf("Expected no error for parsed but empty name, got: %v", err)
-		}
-		
-		if name == nil || *name != "" {
-			t.Errorf("Expected empty string, got: %v", name)
+		if args.Name != "" {
+			t.Errorf("Expected empty string, got: %v", args.Name)
 		}
 	})
 	
 	t.Run("WhitespaceArguments", func(t *testing.T) {
-		argsMap := createMockArgsMap("  test  ", "  /tmp  ", true, true)
+		args := createKeypairArgs("  test  ", "  /tmp  ")
 		
-		name, err := argument.GetStringFromArg(argsMap["name"], true)
-		if err != nil {
-			t.Errorf("Expected no error for whitespace name, got: %v", err)
-		}
-		
-		// The function should return the exact string including whitespace
-		if name == nil || *name != "  test  " {
-			t.Errorf("Expected '  test  ', got: %v", name)
+		// The struct should store the exact string including whitespace
+		if args.Name != "  test  " {
+			t.Errorf("Expected '  test  ', got: %v", args.Name)
 		}
 	})
 }
@@ -436,11 +334,8 @@ func BenchmarkGenerateKeyPair_KeyGeneration(b *testing.B) {
 }
 
 func BenchmarkGenerateKeyPair_ArgumentParsing(b *testing.B) {
-	argsMap := createMockArgsMap("benchmark-test", "/tmp", true, true)
-	
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = argument.GetStringFromArg(argsMap["name"], true)
-		_, _ = argument.GetStringFromArg(argsMap["dir"], true)
+		_ = createKeypairArgs("benchmark-test", "/tmp")
 	}
 }

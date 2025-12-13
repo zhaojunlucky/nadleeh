@@ -9,17 +9,12 @@ import (
 	"path"
 	"strings"
 
-	"github.com/akamensky/argparse"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/security"
 )
 
-func Encrypt(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
-	pPub, err := argument.GetStringFromArg(argsMap["public"], true)
-	if err != nil {
-		log.Fatal(err)
-	}
-	reader, err := os.Open(*pPub)
+func Encrypt(args *argument.EncryptArgs) {
+	reader, err := os.Open(args.Public)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,11 +24,9 @@ func Encrypt(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
 	}
 	ecies := security.ECIESHelper{}
 
-	pFileArg := argsMap["file"]
-	if pFileArg.GetParsed() {
-		filePath := pFileArg.GetResult().(string)
-		log.Infof("encrypt file: %s", filePath)
-		file, err := os.Open(filePath)
+	if args.File != "" {
+		log.Infof("encrypt file: %s", args.File)
+		file, err := os.Open(args.File)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -48,8 +41,8 @@ func Encrypt(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
 			log.Fatal(err)
 		}
 
-		outputFilePath := path.Join(path.Dir(filePath), fmt.Sprintf("%s-encrypted%s", path.Base(filePath),
-			path.Ext(filePath)))
+		outputFilePath := path.Join(path.Dir(args.File), fmt.Sprintf("%s-encrypted%s", path.Base(args.File),
+			path.Ext(args.File)))
 		log.Infof("write encrypted file: %s", outputFilePath)
 		err = os.WriteFile(outputFilePath, []byte(fmt.Sprintf("ENC(%s)", string(encrypted))), 0644)
 		if err != nil {
@@ -58,10 +51,8 @@ func Encrypt(cmd *argparse.Command, argsMap map[string]argparse.Arg) {
 		return
 	}
 
-	pStr := argsMap["str"]
-	if pStr.GetParsed() {
-		pStr := pStr.GetResult().(*string)
-		str := strings.TrimSpace(*pStr)
+	if args.Str != "" {
+		str := strings.TrimSpace(args.Str)
 		log.Infof("encrypt string: %s", str)
 		encrypted, err := ecies.EncryptWithPublic(pubKey, []byte(str))
 		if err != nil {
