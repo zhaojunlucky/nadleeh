@@ -87,6 +87,12 @@ func ParseWorkflow(ymlFile io.Reader) (*Workflow, error) {
 		Checks:     rawWorkflow.Checks,
 	}
 
+	if workflow.Version == "" {
+		log.Debugf("no version set for the workflow file")
+	} else {
+		log.Debugf("workflow version: %s", workflow.Version)
+	}
+
 	for i, node := range rawWorkflow.Jobs.Content {
 		if node.Tag != "!!str" {
 			continue // Node is a map, so it is read out at key.
