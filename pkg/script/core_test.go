@@ -20,7 +20,7 @@ func TestNJSCore_RunCmd(t *testing.T) {
 			args = []string{"hello world"}
 		}
 
-		result := core.RunCmd(cmd, args)
+		result := core.RunCmd(cmd, &args, nil)
 
 		if result.Status != 0 {
 			t.Errorf("Expected status 0, got %d", result.Status)
@@ -45,7 +45,7 @@ func TestNJSCore_RunCmd(t *testing.T) {
 			args = []string{"-c", "exit 42"}
 		}
 
-		result := core.RunCmd(cmd, args)
+		result := core.RunCmd(cmd, &args, nil)
 
 		if result.Status != 42 {
 			t.Errorf("Expected status 42, got %d", result.Status)
@@ -53,7 +53,7 @@ func TestNJSCore_RunCmd(t *testing.T) {
 	})
 
 	t.Run("nonexistent command", func(t *testing.T) {
-		result := core.RunCmd("nonexistent-command-12345", []string{})
+		result := core.RunCmd("nonexistent-command-12345", nil, nil)
 
 		if result.Status == 0 {
 			t.Error("Expected non-zero status for nonexistent command")
@@ -76,7 +76,7 @@ func TestNJSCore_RunCmd(t *testing.T) {
 			args = []string{"-c", "echo 'error message' >&2; exit 1"}
 		}
 
-		result := core.RunCmd(cmd, args)
+		result := core.RunCmd(cmd, &args, nil)
 
 		if result.Status != 1 {
 			t.Errorf("Expected status 1, got %d", result.Status)
@@ -98,7 +98,7 @@ func TestNJSCore_RunCmd(t *testing.T) {
 			args = []string{"-c", "echo 'stdout'; echo 'stderr' >&2"}
 		}
 
-		result := core.RunCmd(cmd, args)
+		result := core.RunCmd(cmd, &args, nil)
 
 		if result.Status != 0 {
 			t.Errorf("Expected status 0, got %d", result.Status)
@@ -112,7 +112,7 @@ func TestNJSCore_RunCmd(t *testing.T) {
 	})
 
 	t.Run("empty command name", func(t *testing.T) {
-		result := core.RunCmd("", []string{})
+		result := core.RunCmd("", nil, nil)
 
 		if result.Status == 0 {
 			t.Error("Expected non-zero status for empty command")
@@ -128,7 +128,7 @@ func TestNJSCore_RunCmd(t *testing.T) {
 			cmd = "echo"
 		}
 
-		result := core.RunCmd(cmd, nil)
+		result := core.RunCmd(cmd, nil, nil)
 
 		// Should not panic and should handle nil args gracefully
 		if result == nil {
