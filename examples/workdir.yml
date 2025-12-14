@@ -9,3 +9,10 @@ jobs:
         run: |
           pwd
           ls -al
+      - name: cmd cwd
+        script: |
+          let ret = core.runCmd("ls")
+          console.log(JSON.stringify(ret))
+          
+          ret = core.runCmd("ls", ['-al'], {"workingDir": "/tmp"})
+          console.log(JSON.stringify(ret))
