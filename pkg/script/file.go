@@ -132,7 +132,7 @@ func (js *NJSFile) ReadFileAsString(filePath string) (*string, error) {
 
 	// Clean and validate the file path
 	cleanPath := filepath.Clean(filePath)
-	
+
 	// Check if file exists and get file info for optimization
 	fileInfo, err := os.Stat(cleanPath)
 	if err != nil {
@@ -179,7 +179,7 @@ func (js *NJSFile) ReadFileAsString(filePath string) (*string, error) {
 	if fileInfo.Size() > 1024*1024 { // 1MB
 		// Pre-allocate buffer for large files
 		bytes = make([]byte, 0, fileInfo.Size())
-		
+
 		// Read in chunks for better memory management
 		buffer := make([]byte, 64*1024) // 64KB chunks
 		for {
@@ -229,4 +229,16 @@ func (js *NJSFile) DeleteFile(filePath string) error {
 
 func (js *NJSFile) WriteFile(filePath string, content string) error {
 	return os.WriteFile(filePath, []byte(content), fs.ModePerm)
+}
+
+func (js *NJSFile) WriteLines(filePath string, lines []string) error {
+	return os.WriteFile(filePath, []byte(strings.Join(lines, "\n")), fs.ModePerm)
+}
+
+func (js *NJSFile) Base(dirPath string) string {
+	return filepath.Base(dirPath)
+}
+
+func (js *NJSFile) Dir(dirPath string) string {
+	return filepath.Dir(dirPath)
 }

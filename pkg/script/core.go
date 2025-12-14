@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
@@ -20,9 +21,22 @@ type CmdResult struct {
 	Stderr string
 }
 
-func (n *NJSCore) ParseYaml(data string) (map[string]any, error) {
+func (n *NJSCore) ParseYAML(data string) (map[string]any, error) {
 	var ret map[string]any
 	err := yaml.Unmarshal([]byte(data), &ret)
+	if err != nil {
+		log.Errorf("failed to parse yaml: %v", err)
+	}
+	return ret, err
+}
+
+func (n *NJSCore) ParseYAMLFile(filePath string) (map[string]any, error) {
+	fileContent, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	var ret map[string]any
+	err = yaml.Unmarshal(fileContent, &ret)
 	if err != nil {
 		log.Errorf("failed to parse yaml: %v", err)
 	}
@@ -43,9 +57,19 @@ func (n *NJSCore) ValidateJSONSchema(data any, jsonSchema string) error {
 	}
 }
 
-func (n *NJSCore) RunCmd(name string, args []string) *CmdResult {
+func (n *NJSCore) RunCmd(name string, args *[]string, options map[string]any) *CmdResult {
 	log.Debugf("run cmd %s with args: %v", name, args)
-	cmd := exec.Command(name, args...)
+	var cmd *exec.Cmd
+	if args != nil {
+		cmd = exec.Command(name, *args...)
+	} else {
+		cmd = exec.Command(name)
+	}
+	if options != nil {
+		if workingDir, ok := options["workingDir"]; ok {
+			cmd.Dir = workingDir.(string)
+		}
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
