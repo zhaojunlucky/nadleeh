@@ -1,6 +1,7 @@
 package script
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/santhosh-tekuri/jsonschema/v5"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/term"
 	"gopkg.in/yaml.v3"
 )
 
@@ -92,4 +94,66 @@ func (n *NJSCore) RunCmd(name string, args *[]string, options map[string]any) *C
 		}
 	}
 	return ret
+}
+
+// ReadLine reads a line of text from stdin (console input)
+func (n *NJSCore) ReadLine(prompt string) (string, error) {
+	if prompt != "" {
+		fmt.Print(prompt)
+	}
+	
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	
+	// Remove trailing newline
+	if len(line) > 0 && line[len(line)-1] == '\n' {
+		line = line[:len(line)-1]
+		// Also remove \r if present (Windows)
+		if len(line) > 0 && line[len(line)-1] == '\r' {
+			line = line[:len(line)-1]
+		}
+	}
+	
+	return line, nil
+}
+
+// ReadPassword reads a password from stdin without echoing (hidden input)
+func (n *NJSCore) ReadPassword(prompt string) (string, error) {
+	if prompt != "" {
+		fmt.Print(prompt)
+	}
+	
+	// Read password without echoing
+	password, err := term.ReadPassword(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", err
+	}
+	
+	// Print newline after password input
+	fmt.Println()
+	
+	return string(password), nil
+}
+
+// ReadKey reads a single key press from stdin
+// Note: This requires terminal to be in raw mode
+func (n *NJSCore) ReadKey() (string, error) {
+	// Save the current terminal state
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		return "", err
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState)
+	
+	// Read a single byte
+	b := make([]byte, 1)
+	_, err = os.Stdin.Read(b)
+	if err != nil {
+		return "", err
+	}
+	
+	return string(b), nil
 }

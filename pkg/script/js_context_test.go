@@ -782,11 +782,14 @@ func TestJSContext_EvalActionScriptStr(t *testing.T) {
 }
 
 func TestNewJSVm(t *testing.T) {
-	vm := NewJSVm()
+	jsVm := NewJSVm()
+	defer jsVm.Shutdown()
 	
-	if vm == nil {
+	if jsVm == nil {
 		t.Error("Expected non-nil VM")
 	}
+	
+	vm := jsVm.Vm
 	
 	// Test that global objects are set
 	sysObj := vm.Get("sys")
@@ -844,7 +847,7 @@ func TestJSSecureContext(t *testing.T) {
 }
 
 func TestUnAllowedEnvKeys(t *testing.T) {
-	expectedKeys := []string{"secure", "env", "http", "core", "file"}
+	expectedKeys := []string{"secure", "env", "http", "core", "file", "ssh"}
 	
 	if len(unAllowedEnvKeys) != len(expectedKeys) {
 		t.Errorf("Expected %d unallowed keys, got %d", len(expectedKeys), len(unAllowedEnvKeys))
@@ -866,7 +869,9 @@ func TestUnAllowedEnvKeys(t *testing.T) {
 
 func TestJSContext_runWithProgram(t *testing.T) {
 	jsCtx := NewJSContext(&encrypt.SecureContext{})
-	vm := NewJSVm()
+	jsVm := NewJSVm()
+	defer jsVm.Shutdown()
+	vm := jsVm.Vm
 	
 	t.Run("CompiledScript", func(t *testing.T) {
 		script := "5 + 3"

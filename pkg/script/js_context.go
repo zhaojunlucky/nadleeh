@@ -2,12 +2,10 @@ package script
 
 import (
 	"fmt"
-	"nadleeh/pkg/common"
 	"nadleeh/pkg/file"
 
 	"github.com/dop251/goja/parser"
 	"github.com/dop251/goja_nodejs/console"
-	"github.com/dop251/goja_nodejs/require"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
 
@@ -38,7 +36,7 @@ type JSContext struct {
 	count         int
 }
 
-var unAllowedEnvKeys = []string{"secure", "env", "http", "core", "file"}
+var unAllowedEnvKeys = []string{"secure", "env", "http", "core", "file", "ssh"}
 
 func (js *JSContext) Compile(script string) error {
 	script = strings.TrimSpace(script)
@@ -140,7 +138,9 @@ func (js *JSContext) RunFile(env env.Env, jsFile string, variables map[string]in
 		return 2, "", fmt.Errorf("invalud file %s", jsFile)
 	}
 
-	vm := NewJSVm()
+	jsVm := NewJSVm()
+	defer jsVm.Shutdown()
+	vm := jsVm.Vm
 	vm.Set("env", env)
 	vm.Set("secure", &js.JSSecCtx)
 
@@ -164,7 +164,10 @@ func (js *JSContext) RunFile(env env.Env, jsFile string, variables map[string]in
 }
 
 func (js *JSContext) Run(env env.Env, script string, variables map[string]interface{}) (int, string, error) {
-	vm := NewJSVm()
+	jsVm := NewJSVm()
+	defer jsVm.Shutdown()
+	vm := jsVm.Vm
+
 	vm.Set("env", env)
 	vm.Set("secure", &js.JSSecCtx)
 
@@ -188,7 +191,9 @@ func (js *JSContext) Run(env env.Env, script string, variables map[string]interf
 }
 
 func (js *JSContext) Eval(env env.Env, expression string, variables map[string]interface{}) (goja.Value, error) {
-	vm := NewJSVm()
+	jsVm := NewJSVm()
+	defer jsVm.Shutdown()
+	vm := jsVm.Vm
 	vm.Set("env", env.GetAll())
 	vm.Set("secure", &js.JSSecCtx)
 
@@ -293,24 +298,6 @@ func (js *JSContext) EvalActionScriptStr(env env.Env, expression string, variabl
 	}
 	return strings.Join(data, ""), nil
 
-}
-
-func NewJSVm() *goja.Runtime {
-
-	vm := goja.New()
-	vm.SetFieldNameMapper(goja.UncapFieldNameMapper())
-
-	registry := new(require.Registry)
-	registry.Enable(vm)
-	registry.RegisterNativeModule(console.ModuleName, console.RequireWithPrinter(printer))
-	console.Enable(vm)
-
-	vm.GlobalObject().Set("sys", common.Sys.GetInfo().GetAll())
-	vm.GlobalObject().Set("file", &NJSFile{})
-	vm.GlobalObject().Set("http", &NJSHttp{})
-	vm.GlobalObject().Set("core", &NJSCore{})
-
-	return vm
 }
 
 func NewJSContext(secCtx *encrypt.SecureContext) JSContext {
