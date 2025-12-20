@@ -847,7 +847,7 @@ func TestJSSecureContext(t *testing.T) {
 }
 
 func TestUnAllowedEnvKeys(t *testing.T) {
-	expectedKeys := []string{"secure", "env", "http", "core", "file"}
+	expectedKeys := []string{"secure", "env", "http", "core", "file", "ssh"}
 	
 	if len(unAllowedEnvKeys) != len(expectedKeys) {
 		t.Errorf("Expected %d unallowed keys, got %d", len(expectedKeys), len(unAllowedEnvKeys))

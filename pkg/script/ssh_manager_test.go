@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestNSSSHManager(t *testing.T) {
+func DisabledTestNSSSHManager(t *testing.T) {
 	sshMgr := &NSSSHManager{}
 	defer sshMgr.Close()
 	sshClient, err := sshMgr.Dial("10.53.1.28", 22, "jun", map[string]any{
