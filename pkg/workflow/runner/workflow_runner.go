@@ -62,6 +62,13 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 		log.Fatalf("failed to parse workflow %v", err)
 	}
 
+	if wa.Usage != nil && *wa.Usage {
+		log.Infof("workflow usage")
+		wf.Checks.Usage()
+
+		return
+	}
+
 	log.Debugf("precheck workflow")
 	if err = wf.Precheck(); err != nil {
 		log.Fatalf("failed to precheck workflow: %v", err)
@@ -74,19 +81,20 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 		log.Fatalf("failed to PreflightCheck workflow: %v", err)
 	}
 
-	if wa.Check == nil || !*wa.Check {
-		log.Debugf("run workflow file: %s", yml)
-		result := wf.Do(env.NewOSEnv(), runCtx, &core.RunnableContext{
-			NeedOutput: false,
-			Args:       argEnv,
-		})
-		if result.ReturnCode != 0 {
-			log.Fatalf("run workflow failed, code %d, err %v", result.ReturnCode, result.Err)
-		} else {
-			log.Info("run workflow passed")
-		}
-	} else {
+	if wa.Check != nil && *wa.Check {
 		log.Infof("workflow check completed")
+		return
+	}
+
+	log.Debugf("run workflow file: %s", yml)
+	result := wf.Do(env.NewOSEnv(), runCtx, &core.RunnableContext{
+		NeedOutput: false,
+		Args:       argEnv,
+	})
+	if result.ReturnCode != 0 {
+		log.Fatalf("run workflow failed, code %d, err %v", result.ReturnCode, result.Err)
+	} else {
+		log.Info("run workflow passed")
 	}
 }
 
