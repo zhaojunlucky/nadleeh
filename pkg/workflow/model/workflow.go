@@ -34,6 +34,39 @@ type WorkflowCheck struct {
 	Envs         []WorkflowArg `yaml:"envs"`
 }
 
+func (c *WorkflowCheck) Usage() {
+	fmt.Println()
+	fmt.Println("Workflow file usage:")
+	fmt.Printf("\tRequires Private Key (--private <private key file>): %v\n", c.PrivateKey)
+	fmt.Printf("\tRequires root (run with sudo or root user): %v\n", c.RequiresRoot)
+	if len(c.Args) > 0 {
+		fmt.Println("\tArgs:")
+		for _, arg := range c.Args {
+			if len(arg.Pattern) > 0 {
+				fmt.Printf("\t\tRequires arg %s: %s\n", arg.Name, arg.Pattern)
+			} else {
+				fmt.Printf("\t\tOptional arg %s\n", arg.Name)
+			}
+		}
+	} else {
+		fmt.Println("\tNo args required")
+	}
+
+	if len(c.Envs) > 0 {
+		fmt.Println("\tEnvironments:")
+		for _, envItem := range c.Envs {
+			if len(envItem.Pattern) > 0 {
+				fmt.Printf("\t\tRequires env %s: %s\n", envItem.Name, envItem.Pattern)
+			} else {
+				fmt.Printf("\t\tOptional env %s\n", envItem.Name)
+			}
+		}
+	} else {
+		fmt.Println("\tNo environments required")
+	}
+	fmt.Println()
+}
+
 // Precheck validates the workflow definition
 func (w *Workflow) Precheck() error {
 	var workflowErrs []error

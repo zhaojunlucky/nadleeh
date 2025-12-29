@@ -6,6 +6,7 @@ type WorkflowArgs struct {
 	File        *string
 	Provider    *string
 	Check       *bool
+	Usage       *bool
 	PrivateFile *string
 }
 
@@ -22,6 +23,7 @@ func NewWorkflowArgsFromRunArgs(args *argument.RunArgs) *WorkflowArgs {
 	}
 
 	wa.Check = &args.Check
+	wa.Usage = &args.Usage
 
 	if args.PrivateFile != "" {
 		wa.PrivateFile = &args.PrivateFile

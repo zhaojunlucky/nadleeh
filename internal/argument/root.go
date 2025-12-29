@@ -9,6 +9,7 @@ type RunArgs struct {
 	File        string
 	Provider    string
 	Check       bool
+	Usage       bool
 	Args        []string
 	PrivateFile string
 }

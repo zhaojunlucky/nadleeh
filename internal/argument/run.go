@@ -45,6 +45,7 @@ func addRunCmd(rootCmd *cobra.Command, handlers *CommandHandlers) {
 	runCmd.Flags().StringVarP(&runArgs.File, "file", "f", "", "Run the workflow file")
 	runCmd.Flags().StringVarP(&runArgs.Provider, "provider", "p", "", "The workflow provider (e.g., github)")
 	runCmd.Flags().BoolVarP(&runArgs.Check, "check", "c", false, "Only check the workflow")
+	runCmd.Flags().BoolVar(&runArgs.Usage, "usage", false, "Show usage")
 	runCmd.Flags().StringArrayVarP(&runArgs.Args, "arg", "a", nil, "Arguments variables")
 	runCmd.Flags().StringVar(&runArgs.PrivateFile, "private", "", "Private key file to decrypt the encrypted data")
 
