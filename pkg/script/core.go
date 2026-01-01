@@ -101,13 +101,13 @@ func (n *NJSCore) ReadLine(prompt string) (string, error) {
 	if prompt != "" {
 		fmt.Print(prompt)
 	}
-	
+
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Remove trailing newline
 	if len(line) > 0 && line[len(line)-1] == '\n' {
 		line = line[:len(line)-1]
@@ -116,7 +116,7 @@ func (n *NJSCore) ReadLine(prompt string) (string, error) {
 			line = line[:len(line)-1]
 		}
 	}
-	
+
 	return line, nil
 }
 
@@ -125,16 +125,16 @@ func (n *NJSCore) ReadPassword(prompt string) (string, error) {
 	if prompt != "" {
 		fmt.Print(prompt)
 	}
-	
+
 	// Read password without echoing
 	password, err := term.ReadPassword(int(os.Stdin.Fd()))
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Print newline after password input
 	fmt.Println()
-	
+
 	return string(password), nil
 }
 
@@ -147,13 +147,17 @@ func (n *NJSCore) ReadKey() (string, error) {
 		return "", err
 	}
 	defer term.Restore(int(os.Stdin.Fd()), oldState)
-	
+
 	// Read a single byte
 	b := make([]byte, 1)
 	_, err = os.Stdin.Read(b)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return string(b), nil
+}
+
+func (n *NJSCore) NewDockerCli(host *string) *DockerCli {
+	return NewDockerCli(host)
 }

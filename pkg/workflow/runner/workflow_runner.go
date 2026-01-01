@@ -8,12 +8,38 @@ import (
 	workflow "nadleeh/pkg/workflow/model"
 	"nadleeh/pkg/workflow/run_context"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
 	"gopkg.in/yaml.v3"
 )
+
+// detectSudoUser detects if running under sudo and returns the appropriate HOME and USER values
+func detectSudoUser() (home string, username string, detected bool) {
+	sudoHome := os.Getenv("SUDO_HOME")
+	sudoUser := os.Getenv("SUDO_USER")
+	currentHome := os.Getenv("HOME")
+
+	// Check if SUDO_HOME is set
+	if len(sudoHome) > 0 {
+		log.Infof("sudo home detected, override HOME=%s to HOME=%s", currentHome, sudoHome)
+		return sudoHome, sudoUser, true
+	}
+
+	// Check if SUDO_USER is set and lookup home directory
+	if len(sudoUser) > 0 {
+		if u, err := user.Lookup(sudoUser); err == nil {
+			log.Infof("sudo user detected, override HOME=%s to HOME=%s", currentHome, u.HomeDir)
+			return u.HomeDir, sudoUser, true
+		} else {
+			log.Warnf("sudo user %s detected but failed to lookup home directory: %v", sudoUser, err)
+		}
+	}
+
+	return "", "", false
+}
 
 func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 	if wa.File == nil || len(*wa.File) == 0 {
@@ -41,12 +67,10 @@ func RunWorkflow(wa *core.WorkflowArgs, argEnv env.Env) {
 		"WORKFLOW_BUILD_DATE": common.BuildDate,
 	}
 
-	sudoHome := os.Getenv("SUDO_HOME")
-	home := os.Getenv("HOME")
-	if len(sudoHome) > 0 {
-		log.Infof("sudo home detected, override HOME=%s to HOME=%s", home, sudoHome)
-		requiredEnvs["HOME"] = sudoHome
-		requiredEnvs["USER"] = os.Getenv("SUDO_USER")
+	// Detect sudo user and override HOME/USER if needed
+	if home, username, detected := detectSudoUser(); detected {
+		requiredEnvs["HOME"] = home
+		requiredEnvs["USER"] = username
 	}
 
 	common.MustSetEnvs(requiredEnvs)
