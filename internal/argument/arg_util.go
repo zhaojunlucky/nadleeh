@@ -13,7 +13,7 @@ func CreateArgsEnv(args []string) env.Env {
 	for _, argLine := range args {
 		key, value, found := strings.Cut(argLine, "=")
 		if !found {
-			argMap[strings.TrimSpace(argLine)] = ""
+			argMap[strings.TrimSpace(argLine)] = "true"
 			continue
 		}
 		key = strings.TrimSpace(key)
