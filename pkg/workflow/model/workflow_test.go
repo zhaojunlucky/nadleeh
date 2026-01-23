@@ -275,15 +275,28 @@ func TestWorkflow_preflightCheck(t *testing.T) {
 		workflow := &Workflow{}
 		env := &mockEnv{data: make(map[string]string)}
 		checks := []WorkflowArg{
-			{Name: "REQUIRED_ENV", Pattern: ""},
+			{Name: "REQUIRED_ENV", Pattern: ".*"},
 		}
 
 		errs := workflow.preflightCheck(env, checks)
 		if len(errs) != 1 {
 			t.Errorf("Expected 1 error, got %d", len(errs))
 		}
-		if errs[0].Error() != "env REQUIRED_ENV is required by the workflow" {
+		if len(errs) > 0 && errs[0].Error() != "env REQUIRED_ENV is required by the workflow" {
 			t.Errorf("Unexpected error message: %v", errs[0])
+		}
+	})
+
+	t.Run("MissingOptionalEnv", func(t *testing.T) {
+		workflow := &Workflow{}
+		env := &mockEnv{data: make(map[string]string)}
+		checks := []WorkflowArg{
+			{Name: "OPTIONAL_ENV", Pattern: ""},
+		}
+
+		errs := workflow.preflightCheck(env, checks)
+		if len(errs) != 0 {
+			t.Errorf("Expected no errors for optional env, got %d", len(errs))
 		}
 	})
 
@@ -348,7 +361,7 @@ func TestWorkflow_preflightCheck(t *testing.T) {
 		checks := []WorkflowArg{
 			{Name: "VALID_ENV", Pattern: "valid-.*"},
 			{Name: "INVALID_ENV", Pattern: "expected-.*"},
-			{Name: "MISSING_ENV", Pattern: ""},
+			{Name: "MISSING_ENV", Pattern: ".*"}, // Required with pattern
 		}
 
 		errs := workflow.preflightCheck(env, checks)
