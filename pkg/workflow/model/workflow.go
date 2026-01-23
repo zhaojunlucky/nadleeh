@@ -131,11 +131,12 @@ func (w *Workflow) preflightCheck(env env.Env, checks []WorkflowArg) []error {
 	envMap := env.GetAll()
 	var errs []error
 	for _, check := range checks {
-		if !util.HasKey(envMap, check.Name) {
-			errs = append(errs, fmt.Errorf("env %s is required by the workflow", check.Name))
-			continue
-		}
 		if len(check.Pattern) > 0 {
+			if !util.HasKey(envMap, check.Name) {
+				errs = append(errs, fmt.Errorf("env %s is required by the workflow", check.Name))
+				continue
+			}
+
 			matched, err := regexp.MatchString(check.Pattern, envMap[check.Name])
 			if err != nil {
 				errs = append(errs, err)
