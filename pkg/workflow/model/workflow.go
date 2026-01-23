@@ -145,9 +145,7 @@ func (w *Workflow) preflightCheck(env env.Env, checks []WorkflowArg) []error {
 			if !matched {
 				errs = append(errs, fmt.Errorf("env %s does not match pattern %s", check.Name, check.Pattern))
 			}
-
 		}
-
 	}
 	return errs
 }
