@@ -48,8 +48,12 @@ func (s SecureContext) HasPrivateKey() bool {
 
 func (s SecureContext) IsEncrypted(str string) bool {
 	str = strings.TrimSpace(str)
+	pattern := s.pattern
+	if pattern == nil {
+		pattern = regexp.MustCompile(`^ENC\((.+)\)$`)
+	}
 
-	match := s.pattern.FindStringSubmatch(strings.TrimSpace(str))
+	match := pattern.FindStringSubmatch(strings.TrimSpace(str))
 	if match == nil {
 		return false
 	}
@@ -62,7 +66,11 @@ func (s SecureContext) DecryptStr(str string) (string, error) {
 	if s.privateKey == nil {
 		return "", fmt.Errorf("no private key")
 	}
-	match := s.pattern.FindStringSubmatch(strings.TrimSpace(str))
+	pattern := s.pattern
+	if pattern == nil {
+		pattern = regexp.MustCompile(`^ENC\((.+)\)$`)
+	}
+	match := pattern.FindStringSubmatch(strings.TrimSpace(str))
 	if match == nil {
 		return str, nil
 	}
@@ -81,7 +89,11 @@ func (s SecureContext) Decrypt(str string) ([]byte, error) {
 	if s.privateKey == nil {
 		return nil, fmt.Errorf("no private key")
 	}
-	match := s.pattern.FindStringSubmatch(str)
+	pattern := s.pattern
+	if pattern == nil {
+		pattern = regexp.MustCompile(`^ENC\((.+)\)$`)
+	}
+	match := pattern.FindStringSubmatch(str)
 	if match == nil {
 		return nil, fmt.Errorf("invalid encrypted string")
 	}
