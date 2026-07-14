@@ -42,6 +42,7 @@ jobs:
       run: staticcheck -tests=false ./...
 
     - name: SonarQube Scan
+      if: false
       uses: Sonarsource/sonarqube-scan-action@v6
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

@@ -3,6 +3,8 @@ package script
 import (
 	"fmt"
 	"nadleeh/pkg/file"
+	"sync"
+	"time"
 
 	"github.com/dop251/goja/parser"
 	"github.com/dop251/goja_nodejs/console"
@@ -34,6 +36,7 @@ type JSContext struct {
 	JSSecCtx      JSSecureContext
 	scriptProgram map[string]*jsScriptProgram
 	count         int
+	Timeout       time.Duration
 }
 
 var unAllowedEnvKeys = []string{"secure", "env", "http", "core", "file", "ssh"}
@@ -127,6 +130,108 @@ func (js *JSContext) runWithProgram(vm *goja.Runtime, script string) (goja.Value
 	return vm.RunString(script)
 }
 
+func (js *JSContext) runWithTimeout(vm *goja.Runtime, run func() (goja.Value, error)) (goja.Value, error) {
+	timeout := js.Timeout
+	if timeout <= 0 {
+		timeout = time.Hour
+	}
+	timer := time.AfterFunc(timeout, func() {
+		vm.Interrupt(fmt.Errorf("javascript execution timed out after %s", timeout))
+	})
+	defer timer.Stop()
+	return run()
+}
+
+type jsOutputWriter struct {
+	mu     sync.Mutex
+	output strings.Builder
+	masker *jsOutputMasker
+}
+
+type jsOutputMasker struct {
+	values []string
+}
+
+func newJSOutputMasker(envs map[string]string) *jsOutputMasker {
+	seen := make(map[string]struct{})
+	var values []string
+	for key, value := range envs {
+		if !isSensitiveJSKey(key) || len(value) < 4 {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		values = append(values, value)
+	}
+	return &jsOutputMasker{values: values}
+}
+
+func isSensitiveJSKey(key string) bool {
+	key = strings.ToLower(key)
+	return strings.Contains(key, "secret") ||
+		strings.Contains(key, "token") ||
+		strings.Contains(key, "password") ||
+		strings.Contains(key, "private") ||
+		strings.Contains(key, "credential")
+}
+
+func (m *jsOutputMasker) Mask(value string) string {
+	if m == nil {
+		return value
+	}
+	for _, secret := range m.values {
+		value = strings.ReplaceAll(value, secret, "***")
+	}
+	return value
+}
+
+func newJSOutputWriter(envs map[string]string) *jsOutputWriter {
+	return &jsOutputWriter{masker: newJSOutputMasker(envs)}
+}
+
+func (w *jsOutputWriter) Print(s string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	masked := w.masker.Mask(s)
+	fmt.Println(masked)
+	w.output.WriteString(masked)
+	w.output.WriteString("\n")
+}
+
+func (w *jsOutputWriter) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.output.String()
+}
+
+func (w *jsOutputWriter) Mask(value string) string {
+	return w.masker.Mask(value)
+}
+
+func (js *JSContext) newVM(envs map[string]string) (*JSVm, *jsOutputWriter) {
+	outputWriter := newJSOutputWriter(envs)
+	consolePrinter := console.StdPrinter{
+		StdoutPrint: outputWriter.Print,
+		StderrPrint: outputWriter.Print,
+	}
+	return NewJSVm(consolePrinter), outputWriter
+}
+
+func jsOutputFromValue(outputWriter *jsOutputWriter, val goja.Value) string {
+	consoleOutput := outputWriter.String()
+	output := consoleOutput
+	if val != nil && val != goja.Undefined() && val != goja.Null() {
+		if len(output) > 0 && !strings.HasSuffix(output, "\n") {
+			output += "\n"
+		}
+		output += outputWriter.Mask(val.String())
+	}
+	return output
+}
+
 func (js *JSContext) RunFile(env env.Env, jsFile string, variables map[string]interface{}) (int, string, error) {
 	fileKey, err := js.CompileFile(jsFile)
 	if err != nil {
@@ -135,10 +240,10 @@ func (js *JSContext) RunFile(env env.Env, jsFile string, variables map[string]in
 
 	st := js.scriptProgram[fileKey]
 	if st == nil || st.err != nil {
-		return 2, "", fmt.Errorf("invalud file %s", jsFile)
+		return 2, "", fmt.Errorf("invalid file %s", jsFile)
 	}
 
-	jsVm := NewJSVm()
+	jsVm, outputWriter := js.newVM(env.GetAll())
 	defer jsVm.Shutdown()
 	vm := jsVm.Vm
 	vm.Set("env", env)
@@ -151,11 +256,10 @@ func (js *JSContext) RunFile(env env.Env, jsFile string, variables map[string]in
 		vm.Set(k, v)
 	}
 
-	val, err := vm.RunProgram(st.program)
-	output := ""
-	if val != nil && val != goja.Undefined() && val != goja.Null() {
-		output = val.String()
-	}
+	val, err := js.runWithTimeout(vm, func() (goja.Value, error) {
+		return vm.RunProgram(st.program)
+	})
+	output := jsOutputFromValue(outputWriter, val)
 	if err != nil {
 		return 1, output, err
 	}
@@ -164,7 +268,7 @@ func (js *JSContext) RunFile(env env.Env, jsFile string, variables map[string]in
 }
 
 func (js *JSContext) Run(env env.Env, script string, variables map[string]interface{}) (int, string, error) {
-	jsVm := NewJSVm()
+	jsVm, outputWriter := js.newVM(env.GetAll())
 	defer jsVm.Shutdown()
 	vm := jsVm.Vm
 
@@ -178,20 +282,19 @@ func (js *JSContext) Run(env env.Env, script string, variables map[string]interf
 		vm.Set(k, v)
 	}
 
-	val, err := js.runWithProgram(vm, script)
-	output := ""
-	if val != nil && val != goja.Undefined() && val != goja.Null() {
-		output = val.String()
-	}
+	val, err := js.runWithTimeout(vm, func() (goja.Value, error) {
+		return js.runWithProgram(vm, script)
+	})
+	output := jsOutputFromValue(outputWriter, val)
 	if err != nil {
-		_ = file.LogStrWithLineNo("JS", script)
+		_ = file.LogStrWithLineNo("JS", newJSOutputMasker(env.GetAll()).Mask(script))
 		return 1, output, err
 	}
 	return 0, output, nil
 }
 
 func (js *JSContext) Eval(env env.Env, expression string, variables map[string]interface{}) (goja.Value, error) {
-	jsVm := NewJSVm()
+	jsVm, _ := js.newVM(env.GetAll())
 	defer jsVm.Shutdown()
 	vm := jsVm.Vm
 	vm.Set("env", env.GetAll())
@@ -204,7 +307,9 @@ func (js *JSContext) Eval(env env.Env, expression string, variables map[string]i
 		vm.Set(k, v)
 	}
 
-	return js.runWithProgram(vm, expression)
+	return js.runWithTimeout(vm, func() (goja.Value, error) {
+		return js.runWithProgram(vm, expression)
+	})
 }
 
 func (js *JSContext) EvalBool(env env.Env, expression string, variables map[string]interface{}) (bool, error) {
@@ -301,9 +406,14 @@ func (js *JSContext) EvalActionScriptStr(env env.Env, expression string, variabl
 }
 
 func NewJSContext(secCtx *encrypt.SecureContext) JSContext {
+	if secCtx == nil {
+		emptySecCtx := encrypt.SecureContext{}
+		secCtx = &emptySecCtx
+	}
 	return JSContext{
 		JSSecCtx:      JSSecureContext{secureCtx: secCtx},
 		scriptProgram: make(map[string]*jsScriptProgram),
+		Timeout:       time.Hour,
 	}
 }
 
@@ -312,10 +422,16 @@ type JSSecureContext struct {
 }
 
 func (js *JSSecureContext) IsEncrypted(str string) bool {
+	if js == nil || js.secureCtx == nil {
+		return false
+	}
 	return js.secureCtx.IsEncrypted(str)
 }
 
 func (js *JSSecureContext) Decrypt(str string) (*string, error) {
+	if js == nil || js.secureCtx == nil {
+		return nil, fmt.Errorf("no secure context")
+	}
 	val, err := js.secureCtx.DecryptStr(str)
 	if err != nil {
 		return nil, err

@@ -16,8 +16,8 @@ type JSRunner struct {
 
 func (r *JSRunner) Compile(runCtx run_context.WorkflowRunContext) error {
 	err := runCtx.JSCtx.Compile(r.Script)
-	log.Errorf("js compile error: %v", err)
 	if err != nil {
+		log.Errorf("js compile error: %v", err)
 		r.hasError = 1
 	} else {
 		r.hasError = 2
