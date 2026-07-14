@@ -1,3 +1,3 @@
 # Nadleeh
 
-See [Nadleeh Introduction](https://gundamz.net/nadleeh/).
+See [Nadleeh Introduction](https://docs.exia.app/nadleeh/).
