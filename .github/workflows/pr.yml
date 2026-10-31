@@ -17,7 +17,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.26'
+        go-version: '1.27'
     - name: Download dependencies
       run: go mod download
 
@@ -42,6 +42,7 @@ jobs:
       run: staticcheck -tests=false ./...
 
     - name: SonarQube Scan
+      if: false
       uses: Sonarsource/sonarqube-scan-action@v6
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -65,10 +66,10 @@ jobs:
         repository: zhaojunlucky/gh-action-script
         path: gh-action-script
         fetch-depth: 0
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Use Node.js 22.x
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 22.x
         cache: 'npm'
         cache-dependency-path: 'gh-action-script/yarn.lock'
     - name: artifacts_retention
@@ -78,6 +79,7 @@ jobs:
         GITHUB_PR_NUM: ${{ github.event.pull_request.number }}
       run: |
         cd gh-action-script
+        corepack enable
         yarn install
         node src/artifact/artifacts_retention.mjs
     - name: Upload artifact

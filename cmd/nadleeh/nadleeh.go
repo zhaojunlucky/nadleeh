@@ -14,24 +14,49 @@ import (
 
 	"os"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
 )
 
+func ensureLogDir() string {
+	candidates := []string{"/var/log/nadleeh"}
+	if cacheDir, err := os.UserCacheDir(); err == nil && cacheDir != "" {
+		candidates = append(candidates, filepath.Join(cacheDir, "nadleeh", "logs"))
+	}
+	candidates = append(candidates, filepath.Join(os.TempDir(), "nadleeh"))
+
+	for _, logPath := range candidates {
+		fiInfo, err := os.Stat(logPath)
+		if os.IsNotExist(err) {
+			if err = os.MkdirAll(logPath, 0755); err != nil {
+				log.Warnf("failed to create log directory %s: %v", logPath, err)
+				continue
+			}
+			return logPath
+		}
+		if err != nil {
+			log.Warnf("failed to access log directory %s: %v", logPath, err)
+			continue
+		}
+		if !fiInfo.IsDir() {
+			log.Warnf("%s must be a directory", logPath)
+			continue
+		}
+		return logPath
+	}
+	return ""
+}
+
 func setupLog() *os.File {
 	if runtime.GOOS == "windows" {
 		log.Fatal("Windows is currently not supported.")
 	}
-	logPath := "/var/log/nadleeh"
-	fiInfo, err := os.Stat(logPath)
-	if os.IsNotExist(err) {
-		err = os.MkdirAll(logPath, 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else if !fiInfo.IsDir() {
-		log.Fatalf("%s must be a directory.", logPath)
+	logPath := ensureLogDir()
+	if logPath == "" {
+		log.Info("Failed to create log directory, using default stderr")
+		return nil
 	}
 	curTime := time.Now()
 	nanoseconds := curTime.Nanosecond()

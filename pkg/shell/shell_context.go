@@ -1,10 +1,12 @@
 package shell
 
 import (
+	"context"
 	"fmt"
 	"nadleeh/pkg/common"
 	"nadleeh/pkg/file"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
@@ -23,6 +25,7 @@ type bashScript struct {
 type ShellContext struct {
 	TmpDir      string
 	scriptCache map[string]*bashScript
+	Timeout     time.Duration
 }
 
 func (sh *ShellContext) Compile(script string) error {
@@ -33,10 +36,10 @@ func (sh *ShellContext) Compile(script string) error {
 	}
 
 	tmpShFile, err := sh.getShellTmpFile(script)
-	defer os.Remove(tmpShFile)
 	if err != nil {
 		return err
 	}
+	defer os.Remove(tmpShFile)
 	cmd := exec.Command("bash", "-n", tmpShFile)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -72,7 +75,15 @@ func (sh *ShellContext) Run(env env.Env, shell string, needOutput bool) (int, st
 	}
 
 	defer os.Remove(tmpShFile)
-	cmd := exec.Command("/bin/bash", "-e", tmpShFile)
+
+	timeout := sh.Timeout
+	if timeout <= 0 {
+		timeout = time.Hour
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "/bin/bash", "-e", tmpShFile)
 
 	for key, value := range common.Sys.GetInfo().GetAll() {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, value))
@@ -84,20 +95,27 @@ func (sh *ShellContext) Run(env env.Env, shell string, needOutput bool) (int, st
 
 	var output string
 	if needOutput {
-		aow := NewStdOutputWriter()
-		cmd.Stdout = *aow
-		cmd.Stderr = *aow
+		aow := NewStdOutputWriter(NewOutputMasker(env.GetAll()))
+		cmd.Stdout = aow
+		cmd.Stderr = aow
 		err = cmd.Run()
 		output = aow.String()
 	} else {
-		cmd.Stderr = os.Stderr
-		cmd.Stdout = os.Stdout
+		aow := NewStdOutputWriter(NewOutputMasker(env.GetAll()))
+		cmd.Stderr = aow
+		cmd.Stdout = aow
 		cmd.Stdin = os.Stdin
 		err = cmd.Run()
 	}
 
 	if err != nil {
 		_ = file.LogFileWithLineNo("bash", tmpShFile)
+		if ctx.Err() == context.DeadlineExceeded {
+			return 124, output, fmt.Errorf("bash script timed out after %s: %w", timeout, ctx.Err())
+		}
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return exitErr.ExitCode(), output, err
+		}
 		return 1, output, err
 	}
 	return 0, output, nil
@@ -107,5 +125,6 @@ func NewShellContext() ShellContext {
 	return ShellContext{
 		TmpDir:      os.TempDir(),
 		scriptCache: make(map[string]*bashScript),
+		Timeout:     time.Hour,
 	}
 }

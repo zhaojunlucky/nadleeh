@@ -16,7 +16,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v93/github"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -106,9 +106,13 @@ func (w *workflowProvider) downloadGitHub(name string) (io.Reader, error) {
 	if w.Cred.Type != "" && w.Cred.Type != bearer {
 		return nil, fmt.Errorf("only Bearer or empty cred type supported for github provider")
 	}
-	client := github.NewClient(nil)
+	var opts []github.ClientOptionsFunc
 	if w.Cred.Type != "" {
-		client = client.WithAuthToken(w.Cred.Password)
+		opts = append(opts, github.WithAuthToken(w.Cred.Password))
+	}
+	client, err := github.NewClient(opts...)
+	if err != nil {
+		return nil, err
 	}
 
 	fileContent, _, _, err := client.Repositories.GetContents(context.Background(), owner, repo, wfPath, nil)
