@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v93/github"
 	log "github.com/sirupsen/logrus"
 	"github.com/zhaojunlucky/golib/pkg/env"
 )
@@ -60,8 +60,10 @@ func (g *GitHubAction) Do(parent env.Env, runCtx *run_context.WorkflowRunContext
 		return core.NewRunnableResult(err)
 	}
 	fmt.Printf("Run GitHub Action plugin, action %s", g.action)
-	client := github.NewClient(nil)
-	client = client.WithAuthToken(g.token)
+	client, err := github.NewClient(github.WithAuthToken(g.token))
+	if err != nil {
+		return core.NewRunnableResult(err)
+	}
 	var pr *github.PullRequest
 	if g.pr > 0 {
 		pr, _, err = client.PullRequests.Get(context.Background(), g.organization, g.repository, g.pr)
