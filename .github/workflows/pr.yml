@@ -66,10 +66,10 @@ jobs:
         repository: zhaojunlucky/gh-action-script
         path: gh-action-script
         fetch-depth: 0
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Use Node.js 22.x
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 22.x
         cache: 'npm'
         cache-dependency-path: 'gh-action-script/yarn.lock'
     - name: artifacts_retention
@@ -79,6 +79,7 @@ jobs:
         GITHUB_PR_NUM: ${{ github.event.pull_request.number }}
       run: |
         cd gh-action-script
+        corepack enable
         yarn install
         node src/artifact/artifacts_retention.mjs
     - name: Upload artifact
